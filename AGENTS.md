@@ -24,6 +24,7 @@ Hype Bot is a private, single-team web app that monitors YouTube channels and se
 - Encrypt destination tokens and webhook URLs at rest using `APP_ENCRYPTION_KEY`. Never log credential values or provider response bodies that might include credentials.
 - Use idempotent event and delivery records; retry temporary delivery errors and show the latest failure in the dashboard.
 - Refresh the stored event title from YouTube on each poll when a video is renamed. Keep the event ID and delivery records unchanged so title edits never trigger another notification.
+- Show detected events grouped by channel, newest first. Store YouTube's published timestamp for uploads and actual start time for start-triggered streams. Order scheduled-trigger streams by their scheduled time, including existing records created before source timestamps were stored.
 - Keep Discord and Facebook test actions explicit and user initiated; validation must not publish provider messages.
 - Keep the public interface limited to the authenticated dashboard and health status. Do not add an unauthenticated data API.
 - Update `MILESTONES.md` when a milestone is materially completed or the project plan changes.

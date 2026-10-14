@@ -268,19 +268,29 @@ def poll_channels(channel_ids: list[str] | None = None) -> None:
                     live = video.get("liveStreamingDetails", {})
                     if not video_id or not snippet:
                         continue
-                    # YouTube titles can change after an event is first detected.
-                    # Refresh the stored title without creating a new event or
-                    # delivery, so dashboard history reflects the current name.
-                    connection.execute(
-                        "UPDATE monitored_events SET title=? WHERE video_id=?",
-                        (snippet.get("title", "Untitled video"), video_id),
-                    )
                     scheduled = live.get("scheduledStartTime")
                     started = live.get("actualStartTime")
                     ended = live.get("actualEndTime")
                     scheduled_dt = parse_youtube_datetime(scheduled)
                     started_dt = parse_youtube_datetime(started)
+                    published_dt = parse_youtube_datetime(snippet.get("publishedAt"))
                     is_stream = bool(scheduled or started or ended)
+                    if is_stream:
+                        event_dt = (
+                            started_dt
+                            if channel["stream_timing"] == "start" and started_dt
+                            else scheduled_dt or started_dt or published_dt
+                        )
+                    else:
+                        event_dt = published_dt
+                    event_time = (event_dt or datetime.now(timezone.utc)).isoformat()
+                    # Refresh changed YouTube metadata without creating a new
+                    # event or delivery; use the video's event date for ordering.
+                    connection.execute(
+                        "UPDATE monitored_events SET title=?, event_time=?, "
+                        "scheduled_at=COALESCE(?, scheduled_at) WHERE video_id=?",
+                        (snippet.get("title", "Untitled video"), event_time, scheduled, video_id),
+                    )
                     if is_stream:
                         if not channel["enabled_streams"]:
                             continue
@@ -314,7 +324,6 @@ def poll_channels(channel_ids: list[str] | None = None) -> None:
                     else:
                         # Use the channel's monitoring start time on every scan;
                         # the API returns recent historical uploads repeatedly.
-                        published_dt = parse_youtube_datetime(snippet.get("publishedAt"))
                         if (
                             not channel["enabled_uploads"]
                             or published_dt is None
@@ -333,7 +342,7 @@ def poll_channels(channel_ids: list[str] | None = None) -> None:
                         "(channel_id, video_id, event_type, title, url, scheduled_at, event_time) "
                         "VALUES (?, ?, ?, ?, ?, ?, ?)",
                         (channel["channel_id"], video_id, event_type, snippet.get("title", "Untitled video"),
-                         f"https://www.youtube.com/watch?v={video_id}", scheduled, now),
+                         f"https://www.youtube.com/watch?v={video_id}", scheduled, event_time),
                     )
                     event = connection.execute("SELECT id FROM monitored_events WHERE video_id=? AND event_type=?", (video_id,event_type)).fetchone()
                     if connection.execute("SELECT changes()").fetchone()[0]:
@@ -453,10 +462,15 @@ def home(request: Request):
         channels = connection.execute(
             "SELECT * FROM channels ORDER BY added_at"
         ).fetchall()
-        history = connection.execute(
-            "SELECT e.*, c.title AS channel_title FROM monitored_events e "
-            "JOIN channels c USING(channel_id) ORDER BY e.id DESC LIMIT 12"
-        ).fetchall()
+        history_by_channel = []
+        for channel in channels:
+            channel_events = connection.execute(
+                "SELECT * FROM monitored_events WHERE channel_id=? "
+                "ORDER BY CASE WHEN ?='scheduled' AND event_type='stream' "
+                "THEN COALESCE(scheduled_at, event_time) ELSE event_time END DESC, id DESC LIMIT 12",
+                (channel["channel_id"], channel["stream_timing"]),
+            ).fetchall()
+            history_by_channel.append({"title": channel["title"], "events": channel_events})
         deliveries = connection.execute("SELECT d.*,e.title,e.event_type,c.title AS channel_title FROM deliveries d JOIN monitored_events e ON e.id=d.event_id JOIN channels c ON c.channel_id=e.channel_id ORDER BY d.id DESC LIMIT 20").fetchall()
         template_rows = connection.execute("SELECT destination,event_type,body FROM message_templates").fetchall()
     templates_map = {f"{row['destination']}_{row['event_type']}": row['body'] for row in template_rows}
@@ -466,7 +480,7 @@ def home(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
-        context=page_context(request, events=events, channels=channels, history=history,
+        context=page_context(request, events=events, channels=channels, history_by_channel=history_by_channel,
                              flash=flash, channel_error=request.query_params.get("error"),
                              poll_minutes=POLL_INTERVAL_MINUTES, youtube_ready=bool(YOUTUBE_API_KEY),
                              deliveries=deliveries, message_templates=templates_map,
