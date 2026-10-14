@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+!.env.example
+secrets
+*.pem
+*.key
+*.p12
+*.pfx
+data
+*.sqlite3*
+__pycache__
+.venv
+venv

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Hype Bot{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div>
+    <p class="eyebrow">YouTube monitoring</p>
+    <h1>Your channels</h1>
+    <p class="muted">Monitor up to four channels. Checks run every {{ poll_minutes }} minutes.</p>
+  </div>
+  <span class="status-pill"><span class="status-dot"></span> App online</span>
+</div>
+
+{% if channel_error %}
+<p class="alert">
+  {% if channel_error == 'missing_key' %}Set YOUTUBE_API_KEY in your deployment environment, then restart the app.
+  {% elif channel_error == 'channel_limit' %}You can monitor up to four channels.
+  {% else %}Could not resolve that YouTube channel. Check the link or handle and try again.{% endif %}
+</p>
+{% endif %}
+{% set destination_error = request.query_params.get('error') %}
+{% if destination_error %}<p class="alert">{{ {'discord_url':'Enter a Discord webhook URL.', 'discord_missing':'Save a Discord webhook first.', 'discord_test':'Discord test failed; check the webhook and try again.', 'template':'Template is empty or uses an unsupported field.', 'meta_config':'Set META_APP_ID, META_APP_SECRET, and APP_BASE_URL before connecting Facebook.', 'meta_auth':'Meta authorization did not complete. Try connecting again.', 'no_pages':'Meta authorized successfully but returned no managed Pages.', 'page_select':'Choose a Page from the available list.', 'facebook_missing':'Connect a Facebook Page first.', 'facebook_test':'Facebook test failed; check Page permissions and try again.'}.get(destination_error, 'Could not save destination settings.') }}</p>{% endif %}
+{% if flash %}<p class="success-message">{{ {'channel_added':'Channel added. The first scan will establish its upload baseline and announce upcoming streams.', 'settings_saved':'Channel settings saved.', 'channel_removed':'Channel removed.', 'discord_saved':'Discord webhook saved encrypted.', 'templates_saved':'Message templates saved.', 'discord_test':'Discord test message sent.', 'pages_loaded':'Managed Pages loaded. Select one to finish connecting.', 'facebook_saved':'Facebook Page connected.', 'facebook_test':'Facebook test post published.'}.get(flash, 'Saved.') }}</p>{% endif %}
+
+<section class="panel">
+  <div class="panel-heading"><div><h2>Notification destinations</h2><p class="muted">Each new event gets an independent delivery record for every connected destination.</p></div></div>
+  <div class="channel-list">
+    <article class="channel-item"><div class="channel-title"><div><h3>Discord</h3><p class="muted">{% if discord_ready %}Webhook configured{% else %}Not connected{% endif %}</p></div></div>
+      <form class="add-channel" action="/destinations/discord" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><label for="discord-webhook">Webhook URL</label><div class="add-row"><input id="discord-webhook" type="password" name="webhook" autocomplete="new-password" placeholder="https://discord.com/api/webhooks/…" required><button class="primary-button" type="submit">Save webhook</button></div></form>
+      {% if discord_ready %}<form action="/destinations/discord/test" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="small-button" type="submit">Send test message</button></form>{% endif %}
+    </article>
+    <article class="channel-item"><div class="channel-title"><div><h3>Facebook Page</h3><p class="muted">{{ facebook_page or 'Not connected' }}</p></div></div>
+      {% if meta_ready %}<form action="/destinations/facebook/connect" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="primary-button" type="submit">Authorize with Meta</button></form>{% else %}<p class="muted">Configure Meta app credentials and the public HTTPS app URL to connect.</p>{% endif %}
+      {% if page_options %}<form action="/destinations/facebook/page" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><label>Managed Page<select name="page_id" required>{% for page in page_options %}<option value="{{ page.id }}">{{ page.name }}</option>{% endfor %}</select></label><button class="small-button" type="submit">Use this Page</button></form>{% endif %}
+      {% if facebook_page %}<form action="/destinations/facebook/test" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="small-button" type="submit">Publish test post</button></form>{% endif %}
+    </article>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-heading"><div><h2>Message templates</h2><p class="muted">Fields: {title}, {channel}, {url}, {event_type}, {scheduled_time}</p></div></div>
+  <form action="/destinations/templates" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><div class="channel-list">
+    {% for destination in ['discord','facebook'] %}{% for kind in ['upload','stream'] %}{% set key=destination ~ '_' ~ kind %}<article class="channel-item"><label>{{ destination|title }} {{ kind|title }}<textarea name="{{ key }}" rows="3" required>{{ message_templates[key] }}</textarea></label><p class="muted">Preview: {{ template_previews[key] }}</p></article>{% endfor %}{% endfor %}
+  </div><button class="primary-button" type="submit">Save all templates</button></form>
+</section>
+
+<section class="panel">
+  <div class="panel-heading">
+    <div><h2>Monitored channels <span class="subtle-label">{{ channels|length }} / 4</span></h2>
+      <p class="muted">{% if youtube_ready %}YouTube Data API connected{% else %}Add YOUTUBE_API_KEY to enable channel setup and polling{% endif %}</p>
+    </div>
+  </div>
+  {% if channels %}
+  <div class="channel-list">
+    {% for channel in channels %}
+    <article class="channel-item">
+      <div class="channel-title">
+        <div><h3>{{ channel.title }}</h3><a class="channel-link" href="https://www.youtube.com/channel/{{ channel.channel_id }}" target="_blank" rel="noopener">youtube.com/channel/{{ channel.channel_id }}</a></div>
+        <span class="badge {% if channel.last_error %}error-badge{% elif channel.last_checked_at %}complete{% endif %}">{% if channel.last_error %}Check failed{% elif channel.last_checked_at %}Monitoring{% else %}Waiting for first scan{% endif %}</span>
+      </div>
+      {% if channel.last_error %}<p class="channel-error">{{ channel.last_error }}</p>{% endif %}
+      <p class="channel-meta">{% if channel.last_checked_at %}Last checked <time>{{ channel.last_checked_at }}</time>{% else %}First scan runs shortly after startup{% endif %}</p>
+      <div class="channel-actions">
+        <form class="settings-form" action="/channels/{{ channel.channel_id }}/settings" method="post">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}">
+          <label class="check-label"><input type="checkbox" name="uploads" {% if channel.enabled_uploads %}checked{% endif %}> Uploads</label>
+          <label class="check-label"><input type="checkbox" name="streams" {% if channel.enabled_streams %}checked{% endif %}> Streams</label>
+          <label>Stream alert timing
+            <select name="stream_timing"><option value="scheduled" {% if channel.stream_timing == 'scheduled' %}selected{% endif %}>When YouTube lists the scheduled stream</option><option value="start" {% if channel.stream_timing == 'start' %}selected{% endif %}>When stream begins</option></select>
+          </label>
+          <button class="small-button" type="submit">Save settings</button>
+        </form>
+        <form action="/channels/{{ channel.channel_id }}/delete" method="post" onsubmit="return confirm('Remove this channel and its monitoring history?')">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="quiet-button danger" type="submit">Remove</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}<p class="empty-state">No channels yet. Add one below to begin monitoring.</p>{% endif %}
+  {% if channels|length < 4 %}
+  <form class="add-channel" action="/channels" method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <label for="channel-url">Add a channel</label>
+    <div class="add-row"><input id="channel-url" name="channel_url" placeholder="Channel URL, @handle, or /user/username" required><button class="primary-button" type="submit">Add channel</button></div>
+    <p class="muted help-text">Supports channel IDs, @handles, and legacy username URLs.</p>
+  </form>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="panel-heading"><div><h2>Detected events</h2><p class="muted">New uploads and stream alerts recorded by monitoring.</p></div><span class="subtle-label">Latest 12</span></div>
+  {% if history %}<ul class="event-list">
+    {% for event in history %}<li><span class="event-marker"></span><span class="event-message"><strong>{{ event.event_type|title }}</strong> · {{ event.channel_title }} — <a href="{{ event.url }}" target="_blank" rel="noopener">{{ event.title }}</a></span><time>{{ event.event_time }}</time></li>{% endfor %}
+  </ul>{% else %}<p class="empty-state">No events detected yet.</p>{% endif %}
+</section>
+
+<section class="panel"><div class="panel-heading"><div><h2>Delivery status</h2><p class="muted">Latest delivery attempts for each destination.</p></div><span class="subtle-label">Latest 20</span></div>
+{% if deliveries %}<ul class="event-list">{% for delivery in deliveries %}<li><span class="event-marker {% if delivery.status == 'failed' %}error{% elif delivery.status == 'sent' %}complete{% endif %}"></span><span class="event-message"><strong>{{ delivery.destination|title }} · {{ delivery.event_type|title }}</strong> — {{ delivery.title }} · {{ delivery.channel_title }}<br><span class="muted">{{ delivery.status|title }} · {{ delivery.attempts }} attempt(s){% if delivery.last_error %} · {{ delivery.last_error }}{% endif %}</span></span><time>{{ delivery.updated_at }}</time></li>{% endfor %}</ul>{% else %}<p class="empty-state">No destination deliveries yet. New events are queued when a destination is connected.</p>{% endif %}</section>
+
+<section class="panel">
+  <div class="panel-heading"><div><h2>System activity</h2><p class="muted">Recent startup and monitoring errors.</p></div><span class="subtle-label">Persistent history</span></div>
+  {% if events %}<ul class="event-list">{% for event in events %}<li><span class="event-marker {{ event.level }}"></span><span class="event-message">{{ event.message }}</span><time>{{ event.created_at }}</time></li>{% endfor %}</ul>{% else %}<p class="empty-state">No activity recorded yet.</p>{% endif %}
+</section>
+<aside class="notice"><strong>Monitoring quota</strong><span>One search.list request per channel per check uses 96 of the 100 daily search calls at four channels checked hourly. Public YouTube data uses an API key; no YouTube OAuth is needed.</span></aside>
+{% endblock %}
