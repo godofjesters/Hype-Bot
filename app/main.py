@@ -485,6 +485,7 @@ def home(request: Request):
                              poll_minutes=POLL_INTERVAL_MINUTES, youtube_ready=bool(YOUTUBE_API_KEY),
                              deliveries=deliveries, message_templates=templates_map,
                              template_previews=template_previews,
+                             theme=load_setting("dashboard_theme") or "business",
                              discord_ready=bool(load_secret("discord_webhook")),
                              facebook_page=load_setting("facebook_page_name"),
                              page_options=page_options, meta_ready=bool(META_APP_ID and META_APP_SECRET and APP_BASE_URL)),
@@ -500,6 +501,16 @@ def load_setting(name: str) -> str | None:
 def save_setting(name: str, value: str) -> None:
     with db_connection() as connection:
         connection.execute("INSERT INTO app_meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (name,value))
+
+
+@app.post("/settings/theme")
+def save_theme(request: Request, theme: str = Form(...), csrf: str = Form(...)):
+    if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
+    require_csrf(request, csrf)
+    if theme not in {"business", "gaming"}:
+        return RedirectResponse("/?error=theme", status_code=303)
+    save_setting("dashboard_theme", theme)
+    return RedirectResponse("/?message=theme_saved", status_code=303)
 
 
 @app.post("/destinations/discord")

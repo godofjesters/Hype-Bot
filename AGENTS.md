@@ -15,6 +15,7 @@ Hype Bot is a private, single-team web app that monitors YouTube channels and se
 - Configure one Discord webhook globally. The current Facebook integration supports one globally selected Page; the planned channel-routing milestone below supersedes that limitation for the user's business and personal workflow.
 - Planned Facebook routing: authorize and retain multiple managed Pages, then assign an optional Facebook Page independently to each monitored YouTube channel. A business YouTube channel should post only to its business Page, and personal channels only to the personal Page. Never cross-post a channel event to a Page that was not assigned to that channel.
 - Keep upload and stream message templates separate for each destination. Available fields: title, channel, URL, event type, scheduled time.
+- Provide Business and Gaming dashboard themes, selectable in Settings and persisted in SQLite; Business is the default for new installations.
 - Do not send an upload alert for a video already announced as a stream.
 
 ## Implementation guidance

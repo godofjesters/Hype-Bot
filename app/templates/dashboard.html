@@ -18,14 +18,15 @@
 </p>
 {% endif %}
 {% set destination_error = request.query_params.get('error') %}
-{% if destination_error %}<p class="alert">{{ {'discord_url':'Enter a Discord webhook URL.', 'discord_missing':'Save a Discord webhook first.', 'discord_test':'Discord test failed; check the webhook and try again.', 'template':'Template is empty or uses an unsupported field.', 'meta_config':'Set META_APP_ID, META_APP_SECRET, and APP_BASE_URL before connecting Facebook.', 'meta_auth':'Meta authorization did not complete. Try connecting again.', 'no_pages':'Meta authorized successfully but returned no managed Pages.', 'page_select':'Choose a Page from the available list.', 'facebook_missing':'Connect a Facebook Page first.', 'facebook_test':'Facebook test failed; check Page permissions and try again.'}.get(destination_error, 'Could not save destination settings.') }}</p>{% endif %}
-{% if flash %}<p class="success-message">{{ {'channel_added':'Channel added. The first scan will establish its upload baseline and announce upcoming streams.', 'settings_saved':'Channel settings saved.', 'channel_removed':'Channel removed.', 'discord_saved':'Discord webhook saved encrypted.', 'templates_saved':'Message templates saved.', 'discord_test':'Discord test message sent.', 'pages_loaded':'Managed Pages loaded. Select one to finish connecting.', 'facebook_saved':'Facebook Page connected.', 'facebook_test':'Facebook test post published.'}.get(flash, 'Saved.') }}</p>{% endif %}
+{% if destination_error %}<p class="alert">{{ {'discord_url':'Enter a Discord webhook URL.', 'discord_missing':'Save a Discord webhook first.', 'discord_test':'Discord test failed; check the webhook and try again.', 'template':'Template is empty or uses an unsupported field.', 'theme':'Choose a valid dashboard theme.', 'meta_config':'Set META_APP_ID, META_APP_SECRET, and APP_BASE_URL before connecting Facebook.', 'meta_auth':'Meta authorization did not complete. Try connecting again.', 'no_pages':'Meta authorized successfully but returned no managed Pages.', 'page_select':'Choose a Page from the available list.', 'facebook_missing':'Connect a Facebook Page first.', 'facebook_test':'Facebook test failed; check Page permissions and try again.'}.get(destination_error, 'Could not save destination settings.') }}</p>{% endif %}
+{% if flash %}<p class="success-message">{{ {'channel_added':'Channel added. The first scan will establish its upload baseline and announce upcoming streams.', 'settings_saved':'Channel settings saved.', 'channel_removed':'Channel removed.', 'discord_saved':'Discord webhook saved encrypted.', 'templates_saved':'Message templates saved.', 'discord_test':'Discord test message sent.', 'theme_saved':'Dashboard theme saved.', 'pages_loaded':'Managed Pages loaded. Select one to finish connecting.', 'facebook_saved':'Facebook Page connected.', 'facebook_test':'Facebook test post published.'}.get(flash, 'Saved.') }}</p>{% endif %}
 
 <div class="dashboard-tabs" role="tablist" aria-label="Dashboard sections">
   <button class="dashboard-tab" id="tab-overview" type="button" role="tab" aria-controls="panel-overview" aria-selected="true">Overview</button>
   <button class="dashboard-tab" id="tab-channels" type="button" role="tab" aria-controls="panel-channels" aria-selected="false" tabindex="-1">Channels <span>{{ channels|length }}/4</span></button>
   <button class="dashboard-tab" id="tab-notifications" type="button" role="tab" aria-controls="panel-notifications" aria-selected="false" tabindex="-1">Notifications</button>
   <button class="dashboard-tab" id="tab-activity" type="button" role="tab" aria-controls="panel-activity" aria-selected="false" tabindex="-1">Activity</button>
+  <button class="dashboard-tab" id="tab-settings" type="button" role="tab" aria-controls="panel-settings" aria-selected="false" tabindex="-1">Settings</button>
 </div>
 
 <section class="tab-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
@@ -121,6 +122,29 @@
   </section>
 </section>
 
+<section class="tab-panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" tabindex="0" hidden>
+  <section class="panel theme-settings">
+    <div class="panel-heading"><div><h2>Dashboard appearance</h2><p class="muted">Choose the visual style for this dashboard. Your choice is saved on this installation.</p></div></div>
+    <form action="/settings/theme" method="post" class="theme-form">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}">
+      <fieldset class="theme-options">
+        <legend>Theme</legend>
+        <label class="theme-option {% if theme == 'business' %}selected{% endif %}">
+          <input type="radio" name="theme" value="business" {% if theme == 'business' %}checked{% endif %}>
+          <span class="theme-swatch business-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span><strong>Business</strong><small>Light, clean, and focused</small></span>
+        </label>
+        <label class="theme-option {% if theme == 'gaming' %}selected{% endif %}">
+          <input type="radio" name="theme" value="gaming" {% if theme == 'gaming' %}checked{% endif %}>
+          <span class="theme-swatch gaming-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span><strong>Gaming</strong><small>Dark surfaces with neon accents</small></span>
+        </label>
+      </fieldset>
+      <button class="primary-button" type="submit">Save theme</button>
+    </form>
+  </section>
+</section>
+
 <section class="tab-panel" id="panel-activity" role="tabpanel" aria-labelledby="tab-activity" tabindex="0" hidden>
   <section class="panel">
     <div class="panel-heading"><div><h2>Detected events</h2><p class="muted">New uploads and stream alerts grouped by YouTube channel.</p></div><span class="subtle-label">Latest 12 per channel</span></div>
@@ -182,6 +206,7 @@
   const message = params.get('message');
   const error = params.get('error');
   if (channelError || channelMessages.has(message)) selectTab(document.getElementById('tab-channels'));
+  else if (message === 'theme_saved' || error === 'theme') selectTab(document.getElementById('tab-settings'));
   else if (message || error) selectTab(document.getElementById('tab-notifications'));
 })();
 </script>

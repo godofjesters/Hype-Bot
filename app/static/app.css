@@ -131,3 +131,120 @@ select { min-height: 36px; padding: 6px 9px; border: 1px solid #344457; border-r
   .settings-form { align-items: flex-start; }
   .add-row { flex-direction: column; }
 }
+
+/* Theme selector */
+.theme-form { margin-top: 22px; }
+.theme-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 0 0 18px; padding: 0; border: 0; }
+.theme-options legend { margin-bottom: 10px; color: var(--muted); font-size: 12px; font-weight: 650; }
+.theme-option { display: flex; align-items: center; gap: 13px; min-height: 92px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+.theme-option.selected { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent), transparent 82%); }
+.theme-option input { width: 17px; min-height: 17px; flex: 0 0 17px; accent-color: var(--accent); }
+.theme-option > span:last-child { display: grid; gap: 3px; }
+.theme-option strong { color: var(--text); font-size: 13px; }
+.theme-option small { color: var(--muted); font-size: 11px; font-weight: 450; }
+.theme-swatch { display: flex; align-items: flex-end; gap: 3px; width: 54px; height: 48px; padding: 6px; border: 1px solid var(--border); border-radius: 7px; }
+.theme-swatch i { flex: 1; height: 65%; border-radius: 2px; }
+.theme-swatch i:nth-child(2) { height: 90%; }
+.business-swatch { background: #f2f6f8; }
+.business-swatch i { background: #2d776d; }
+.gaming-swatch { background: #121127; }
+.gaming-swatch i { background: #a855f7; box-shadow: 0 0 7px #a855f7; }
+.gaming-swatch i:nth-child(2) { background: #30e7f2; box-shadow: 0 0 7px #30e7f2; }
+
+body[data-theme="business"] {
+  color-scheme: dark;
+  --bg: #151c22;
+  --panel: #202a32;
+  --panel-soft: #27343d;
+  --border: #35454f;
+  --text: #e4ecef;
+  --muted: #a4b3ba;
+  --accent: #70b9a9;
+  --green: #72c69b;
+  --amber: #e9bd70;
+  background: linear-gradient(180deg, #202c33 0, #192229 290px, var(--bg) 100%);
+}
+body[data-theme="business"] .topbar { border-color: #35454f; background: rgba(24, 33, 39, .9); }
+body[data-theme="business"] .status-card,
+body[data-theme="business"] .panel { background: linear-gradient(145deg, #26323a, #202a32); box-shadow: 0 5px 18px rgba(0, 0, 0, .12); }
+body[data-theme="business"] .login-card { background: #202a32; box-shadow: 0 18px 50px rgba(0, 0, 0, .24); }
+body[data-theme="business"] .card-icon { border-color: #42665f; color: #b4dfd4; background: #2c4642; }
+body[data-theme="business"] .badge { border-color: #46565f; color: #c1cdd2; background: rgba(255,255,255,.035); }
+body[data-theme="business"] .dashboard-tab[aria-selected="true"] { color: #9de0d0; }
+body[data-theme="business"] .text-action,
+body[data-theme="business"] .event-message a { color: #9bd8cb; }
+body[data-theme="business"] input,
+body[data-theme="business"] textarea,
+body[data-theme="business"] select { border-color: #485a64; color: #e4ecef; background: #192229; }
+body[data-theme="business"] .small-button { border-color: #4c756d; color: #c7e8df; background: #2b403d; }
+body[data-theme="business"] .primary-button { color: #10201d; background: #83cbb9; }
+body[data-theme="business"] .primary-button:hover { background: #a0dbc9; }
+body[data-theme="business"] .notice { border-color: #3f625b; color: #b9d0ca; background: #263b38; }
+body[data-theme="business"] .notice strong { color: #d1e7e0; }
+body[data-theme="business"] code { color: #b6e1d6; }
+body[data-theme="business"] .status-pill { border-color: #426d58; color: #b7e6ca; background: #263b31; }
+body[data-theme="business"] .status-dot { box-shadow: none; }
+body[data-theme="business"] .alert { border-color: #754748; color: #ffc0bf; background: #392729; }
+body[data-theme="business"] .success-message { border-color: #426d58; color: #b7e6ca; background: #263b31; }
+body[data-theme="business"] .danger { color: #ffaaaa; }
+body[data-theme="business"] .channel-error { color: #ffaaaa; }
+
+body[data-theme="gaming"] {
+  --bg: #090914;
+  --panel: #121226;
+  --panel-soft: #1a1a35;
+  --border: #343052;
+  --text: #f0edff;
+  --muted: #aaa5c7;
+  --accent: #42e8f5;
+  --green: #66f0a5;
+  --amber: #ffd166;
+  background: radial-gradient(ellipse at 12% 0%, rgba(126, 55, 206, .25), transparent 36%), radial-gradient(ellipse at 92% 8%, rgba(26, 190, 205, .15), transparent 31%), #090914;
+}
+body[data-theme="gaming"] { font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif; }
+body[data-theme="gaming"] h1,
+body[data-theme="gaming"] h2,
+body[data-theme="gaming"] h3,
+body[data-theme="gaming"] .brand,
+body[data-theme="gaming"] .dashboard-tab {
+  font-family: "Bahnschrift SemiCondensed", "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
+  letter-spacing: .015em;
+}
+body[data-theme="gaming"] h1 { font-weight: 800; letter-spacing: .035em; }
+body[data-theme="gaming"] h2,
+body[data-theme="gaming"] h3 { font-weight: 700; }
+body[data-theme="gaming"] .eyebrow { letter-spacing: .19em; }
+body[data-theme="gaming"] .card-icon,
+body[data-theme="gaming"] .badge,
+body[data-theme="gaming"] .subtle-label { font-family: "Cascadia Code", Consolas, monospace; letter-spacing: .025em; }
+body[data-theme="gaming"] .primary-button,
+body[data-theme="gaming"] .small-button { font-family: "Bahnschrift", "Segoe UI", sans-serif; font-weight: 700; letter-spacing: .025em; }
+body[data-theme="gaming"] .topbar { border-color: #292744; background: rgba(10, 10, 25, .8); }
+body[data-theme="gaming"] .brand::before { border-radius: 1px; box-shadow: 0 0 13px rgba(66, 232, 245, .8); }
+body[data-theme="gaming"] .status-card,
+body[data-theme="gaming"] .panel { border-color: #393353; background: linear-gradient(145deg, rgba(27, 25, 52, .98), rgba(15, 15, 32, .98)); box-shadow: 0 8px 28px rgba(0,0,0,.2); }
+body[data-theme="gaming"] .login-card { border-color: #393353; background: linear-gradient(145deg, #1b1934, #0f0f20); }
+body[data-theme="gaming"] .card-icon { border-color: #534277; color: #d6c0ff; background: #26203e; }
+body[data-theme="gaming"] .dashboard-tab[aria-selected="true"] { color: #70f4fc; text-shadow: 0 0 12px rgba(66, 232, 245, .35); }
+body[data-theme="gaming"] .dashboard-tab[aria-selected="true"] { box-shadow: 0 2px 11px rgba(66, 232, 245, .14); }
+body[data-theme="gaming"] .text-action,
+body[data-theme="gaming"] .event-message a { color: #74eff7; }
+body[data-theme="gaming"] input,
+body[data-theme="gaming"] textarea,
+body[data-theme="gaming"] select { border-color: #484266; color: #f0edff; background: #0d0d1d; }
+body[data-theme="gaming"] input:focus,
+body[data-theme="gaming"] textarea:focus { box-shadow: 0 0 0 3px rgba(66, 232, 245, .15); }
+body[data-theme="gaming"] .small-button { border-color: #59457c; color: #e0d0ff; background: #29213f; }
+body[data-theme="gaming"] .primary-button { color: #08121d; background: linear-gradient(100deg, #42e8f5, #ae73ff); }
+body[data-theme="gaming"] .primary-button:hover { background: linear-gradient(100deg, #83f4fb, #c49aff); }
+body[data-theme="gaming"] .notice { border-color: #403768; color: #cbc4e8; background: rgba(73, 55, 130, .2); }
+body[data-theme="gaming"] .notice strong { color: #d9ccff; }
+body[data-theme="gaming"] code { color: #91f5fc; }
+body[data-theme="gaming"] .event-marker { box-shadow: 0 0 9px rgba(66, 232, 245, .7); }
+body[data-theme="gaming"] .status-dot { box-shadow: 0 0 12px rgba(102, 240, 165, .9); }
+body[data-theme="gaming"] .alert { border-color: rgba(255, 112, 152, .4); color: #ffb4cb; background: rgba(104, 28, 63, .3); }
+body[data-theme="gaming"] .success-message { border-color: rgba(102, 240, 165, .35); color: #a9ffd0; background: rgba(26, 93, 61, .25); }
+
+@media (max-width: 650px) {
+  .theme-options { grid-template-columns: 1fr; }
+}

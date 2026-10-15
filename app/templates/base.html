@@ -6,7 +6,7 @@
   <title>{% block title %}Hype Bot{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
 </head>
-<body>
+<body{% if theme is defined %} data-theme="{{ theme }}"{% endif %}>
   <header class="topbar">
     <a class="brand" href="/">Hype Bot</a>
     {% if username %}
