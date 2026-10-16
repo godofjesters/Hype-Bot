@@ -1,145 +1,212 @@
 # Hype Bot
 
-Private YouTube notification app for a Debian 12 server. The project is being delivered in milestones; see [MILESTONES.md](MILESTONES.md) for progress and [AGENTS.md](AGENTS.md) for the decisions to preserve.
+Hype Bot watches YouTube channels and sends new upload and livestream alerts to Discord and Facebook Pages.
 
-## Debian 12 deployment with Docker CLI
+## Pick where to run it
 
-This deployment runs one container named `hype-bot`, publishes only on host loopback, and stores SQLite in the named volume `hype-bot-data`. Put the dashboard behind your VPN and an HTTPS reverse proxy. The host must have Docker Engine installed and running.
+- **Try it on your Windows computer:** follow [Docker Desktop for Windows](#install-on-windows-with-docker-desktop).
+- **Install it on your Debian server:** follow [Debian server install](#install-on-your-debian-server).
 
-### 1. Create configuration and secrets
+You only need to follow one install guide. Both use Docker commands; you do not need a `.yaml` or Compose file.
 
-From a private project directory on the Debian host, copy the sample and restrict access to it:
+## Before you start
+
+Have these ready:
+
+- Docker Desktop (Windows) or Docker Engine (Debian).
+- A YouTube Data API key, if you want channel monitoring.
+- A Discord webhook, if you want Discord alerts.
+- Meta app credentials and an HTTPS website address, if you want Facebook alerts.
+
+Facebook setup can wait. You can start with YouTube and Discord.
+
+## Install on Windows with Docker Desktop
+
+### 1. Open the project folder
+
+Start Docker Desktop and wait until it says it is running. Open PowerShell in the Hype Bot project folder—the folder containing `Dockerfile`.
+
+If the project is not on this computer yet, clone the GitHub repository first. Your GitHub account must have access to this private repository.
+
+### 2. Create your settings file
+
+For a first install, copy the sample settings file and open it. If `.env` already exists, do not overwrite it.
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Set `ADMIN_USERNAME` and `ADMIN_PASSWORD`. Create two different random values for `APP_SECRET` and `APP_ENCRYPTION_KEY`. In PowerShell 7, run this once for each value:
+
+```powershell
+$bytes = [byte[]]::new(32)
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+[Convert]::ToHexString($bytes)
+```
+
+Paste the first output into `APP_SECRET` and the second into `APP_ENCRYPTION_KEY`. Keep both safe; losing the encryption key means saved Discord and Facebook credentials cannot be read.
+
+Also set `YOUTUBE_API_KEY` if you want YouTube monitoring. Leave the `META_APP_ID` and `META_APP_SECRET` lines empty for now if you are not setting up Facebook. Leave `COOKIE_SECURE=false` for local use.
+
+Save and close Notepad. Keep `.env` private; never send or commit it.
+
+### 3. Build and start Hype Bot
+
+Run these commands in the same PowerShell window:
+
+```powershell
+docker build -t hype-bot:local .
+docker run -d --name hype-bot --restart unless-stopped -p 127.0.0.1:8018:8000 --env-file .env -v hype-bot-data:/data hype-bot:local
+```
+
+Docker creates the `hype-bot-data` storage volume automatically. It keeps your channels, settings, and history if you replace the container.
+
+Run the `docker run` command only for a new install. If the container already exists, start it with `docker start hype-bot`.
+
+### 4. Open the dashboard
+
+Go to <http://localhost:8018> and sign in with the username and password from `.env`.
+
+To check that Hype Bot is running, use:
+
+```powershell
+Invoke-RestMethod http://localhost:8018/health
+```
+
+## Install on your Debian server
+
+These steps use your server folder `/opt/hype-bot`, Nginx Proxy Manager, and host port `8018`. You choose where and how to host Hype Bot; the Debian and NPM setup below is one example. Facebook has one extra requirement: Meta authorization must use a real HTTPS URL with a domain name, such as `https://hypebot.example.com`. An IP address by itself (even with HTTPS) is not a suitable Facebook callback URL. You can use a domain you own or a domain-based dynamic DNS service if that fits your hosting setup.
+
+### 1. Put the project on the server
+
+Connect to Debian using SSH. Run these commands there. The server must already have access to your private GitHub repository:
+
+```sh
+sudo install -d -o "$USER" -g "$(id -gn)" -m 750 /opt/hype-bot
+git clone git@github.com:godofjesters/Hype-Bot.git /opt/hype-bot
+cd /opt/hype-bot
+```
+
+If Hype Bot is already in `/opt/hype-bot`, skip `git clone` and run `cd /opt/hype-bot`.
+
+### 2. Add your settings
+
+For a first install, create and open the settings file. If `/opt/hype-bot/.env` already exists, keep it and open it with `nano .env` instead—do not overwrite it.
 
 ```sh
 cp .env.example .env
 chmod 600 .env
+nano .env
 ```
 
-Create three different random values on the server with `openssl rand -hex 32`. Put one in each of `ADMIN_PASSWORD`, `APP_SECRET`, and `APP_ENCRYPTION_KEY` in `.env`; do not reuse values. Use the generated password to sign in. Keep a protected offline copy of the exact `APP_ENCRYPTION_KEY` and `APP_SECRET` alongside the backup plan. Losing the encryption key makes saved Discord and Meta credentials unreadable; changing it does not re-encrypt them. Changing `APP_SECRET` signs out existing sessions.
+In `.env`:
 
-Create a Google Cloud project, enable YouTube Data API v3, and create an API key. Set `YOUTUBE_API_KEY` in `.env` and restrict the key to YouTube Data API v3 where practical. Channel setup and polling are disabled without this key. Set `COOKIE_SECURE=true` and set `APP_BASE_URL` to the exact externally used HTTPS origin, for example `https://hype-bot.example.net` (no trailing slash). If Facebook Page authorization is needed, also set `META_APP_ID` and `META_APP_SECRET`.
+1. Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` to your dashboard login.
+2. Run `openssl rand -hex 32` twice. Put one result in `APP_SECRET`, the other in `APP_ENCRYPTION_KEY`. Keep these values safe and do not reuse them.
+3. Put your YouTube API key in `YOUTUBE_API_KEY`.
+4. Set `COOKIE_SECURE=true`.
+5. Set `APP_BASE_URL` to the HTTPS address you use for Hype Bot, with no trailing slash. Example: `https://hypebot.example.com`.
+6. For Facebook, also fill in `META_APP_ID` and `META_APP_SECRET`. You can leave them empty until Facebook setup.
 
-### 2. Build and start
+Save in nano with **Ctrl+O**, press **Enter**, then exit with **Ctrl+X**.
 
-Run these commands from the directory containing the Dockerfile and `.env`:
+### 3. Build and start the container
+
+Run these commands from `/opt/hype-bot`:
 
 ```sh
 docker build -t hype-bot:local .
-docker volume create hype-bot-data
-docker run -d --name hype-bot --restart unless-stopped \
-  --publish 127.0.0.1:8000:8000 \
-  --env-file .env \
-  --volume hype-bot-data:/data \
-  hype-bot:local
+docker run -d --name hype-bot --restart unless-stopped --publish 192.168.150.3:8018:8000 --env-file .env --volume hype-bot-data:/data hype-bot:local
 ```
 
-Docker reads `.env` when creating the container; editing it later requires recreating the container. The image runs as UID 10001 and writes its database to `/data/hype-bot.sqlite3`. The volume preserves channel state, event and delivery history, templates, and encrypted destination credentials across container replacement. Do not mount a host folder over `/app` or `/data` in place of the named volume.
+The app uses port `8000` inside Docker. Port `8018` is the port Nginx Proxy Manager uses to reach it. Docker creates the `hype-bot-data` volume automatically.
 
-### 3. VPN, HTTPS proxy, and Meta OAuth
+Run this `docker run` command only for the first install. If the container already exists, use `docker start hype-bot`.
 
-Keep the container bound to `127.0.0.1` when the reverse proxy is on the same Debian host. Configure the proxy to serve the dashboard only through the VPN-restricted HTTPS hostname, proxy requests to `http://127.0.0.1:8000`, preserve the `Host` header, and send the usual `X-Forwarded-Proto: https` and client address headers. Restrict the proxy listener/firewall to the VPN as appropriate. Do not expose port 8000 to the public Internet. If a proxy must run on another machine, bind Docker to a specific VPN interface address and firewall that port so only the proxy can reach it.
+### 4. Point Nginx Proxy Manager to Hype Bot
 
-For Facebook, register this exact redirect URI in the Meta app's Facebook Login settings:
+Nginx Proxy Manager (NPM) is the web page you already use to manage your proxy hosts and certificates. These steps add one entry that sends requests for your Hype Bot web address to the app on your Debian server.
 
-```text
-https://hype-bot.example.net/destinations/facebook/callback
-```
+Before opening NPM, decide on the web address you will use, such as `hypebot.example.com`. Replace that example with your own domain everywhere below. In `.env`, `APP_BASE_URL` must be `https://` followed by that same address, with no trailing slash.
 
-It must match `APP_BASE_URL` plus `/destinations/facebook/callback` exactly, including scheme, hostname, and any port. The callback must be reachable over HTTPS from the user's browser. Meta's authorization flow uses the signed-in dashboard session, so the dashboard and callback should use the same public hostname. Permissions required by the current app are `pages_show_list` and `pages_manage_posts`; Meta may require app review or app/Page roles outside development mode. After changing `.env`, recreate the container with the updated environment.
+#### Add the proxy entry
 
-### 4. Inspect health and logs
+1. Sign in to NPM. In the top menu, choose **Hosts**, then **Proxy Hosts**.
+2. Select **Add Proxy Host**.
+3. On the **Details** tab, enter:
+
+   - **Domain Names:** your Hype Bot address, for example `hypebot.example.com`. This is the address you will type into your browser.
+   - **Scheme:** `http`
+   - **Forward Hostname / IP:** `192.168.150.3` (your Debian server's local network address)
+   - **Forward Port:** `8018` (the port Docker published for Hype Bot)
+
+4. For **Access List**, choose the list you already use to limit your private sites to VPN users. Do not choose **Publicly Accessible**. If you do not have a VPN-only access list yet, set that up before making Hype Bot reachable through NPM.
+5. Leave the other options at their defaults and select **Save**.
+
+#### Add HTTPS
+
+1. Find the Hype Bot entry in **Proxy Hosts**, open its three-dot menu, and choose **Edit**.
+2. Open the **SSL** tab.
+3. If you already have a certificate for this exact domain, select it. Otherwise choose the option to request a new Let's Encrypt certificate, enter your email address, accept the terms, and save.
+4. If shown, enable **Force SSL**, then select **Save**.
+
+For a new Let's Encrypt certificate, the domain's public DNS must point to your home/server public IP, and your router/firewall must allow inbound port `80` to NPM while the certificate is requested. NPM uses that connection to prove you control the domain. Keep Docker's Hype Bot port `8018` private; do not forward `8018` from your router to the Internet. If you already have a working certificate for the domain, select it instead of requesting another one.
+
+After saving, open `https://` followed by your Hype Bot domain in a browser while connected to your VPN. For example, open `https://hypebot.example.com`—not the raw IP and port. NPM's **Domain Names** field is the browser address; the **Forward Hostname / IP** and **Forward Port** fields tell NPM where the app is on your local network.
+
+On the Debian server, check the app with:
 
 ```sh
-docker ps --filter name=hype-bot
 docker inspect --format '{{.State.Health.Status}}' hype-bot
-curl --fail http://127.0.0.1:8000/health
-docker logs --since 1h hype-bot
-docker logs --follow hype-bot
 ```
 
-The health endpoint checks that the app can query SQLite and returns `{"status":"ok"}`. Docker's image health check probes it every 30 seconds. Logs contain operational errors, but should not contain provider credentials. Inspect channel and delivery failures in the authenticated dashboard as well.
+Wait for `healthy`. Then open the HTTPS domain in your browser and sign in.
 
-### 5. Back up and restore
+## Use the dashboard
 
-SQLite uses WAL mode. Stop the app before copying the volume so the database and its WAL are captured consistently. Store backups and `.env`/key material in access-controlled, encrypted storage outside the server; test restores periodically.
+1. Open **Channels** and add a YouTube channel link.
+2. Choose whether to monitor uploads, streams, or both. Stream alerts default to when YouTube schedules the stream.
+3. Open **Notifications**. Add a Discord webhook and use **Send test message** if you want to confirm it works.
+4. Open **Activity** to review detected events and delivery status.
+5. Open **Settings** to switch between the Business and Gaming themes.
+
+When a channel is first added, Hype Bot announces its upcoming public streams. It uses that time as the starting point for uploads, so older videos are not replayed as alerts.
+
+## Connect Facebook
+
+Facebook requires an HTTPS URL with a domain name that routes to Hype Bot. It cannot use an IP address by itself or plain `http://localhost:8018`. Where Hype Bot is hosted is up to you; the key requirement is that the domain-based HTTPS address and callback are configured for Meta.
+
+1. The Meta app needs Facebook Login and Page permissions `pages_show_list` and `pages_manage_posts`. In its Facebook Login settings, add this redirect address, replacing the example domain with your own:
+
+   ```text
+   https://hypebot.example.com/destinations/facebook/callback
+   ```
+
+   The address must exactly match `APP_BASE_URL` plus `/destinations/facebook/callback`.
+2. Add `META_APP_ID` and `META_APP_SECRET` to `/opt/hype-bot/.env` on Debian.
+3. Recreate the container so it loads the new settings:
+
+   ```sh
+   docker rm -f hype-bot
+   docker run -d --name hype-bot --restart unless-stopped --publish 192.168.150.3:8018:8000 --env-file .env --volume hype-bot-data:/data hype-bot:local
+   ```
+
+   This keeps your `hype-bot-data` volume.
+4. Open Hype Bot through its HTTPS domain. Under **Notifications**, select **Authorize with Meta**, sign in, and choose the Page.
+5. Select **Publish test post** when you are ready. It creates a real, visible post on the selected Page.
+
+The current version sends Facebook alerts to one selected Page for all channels. It cannot yet send one channel to a business Page and another to a personal Page.
+
+## Stop, start, and update
+
+On Windows, run these in PowerShell. On Debian, run them in SSH from `/opt/hype-bot`:
 
 ```sh
 docker stop hype-bot
-install -d -m 700 "$HOME/hype-bot-backups"
-docker run --rm --volume hype-bot-data:/data:ro \
-  --volume "$HOME/hype-bot-backups:/backup" alpine:3.20 \
-  tar -czf /backup/hype-bot-$(date -u +%Y%m%dT%H%M%SZ).tar.gz -C /data .
 docker start hype-bot
 ```
 
-To restore without overwriting the current volume, create a new volume, extract the archive there, then recreate the app container against that volume. Replace the archive path with the backup you intend to restore:
+To update after pulling new project files, build the new image, remove the old container, and start it again with the same `docker run` command from your install section. Do not remove the `hype-bot-data` volume. Copy that `docker run` line somewhere safe; you will need it when updating.
 
-```sh
-docker stop hype-bot
-docker volume create hype-bot-data-restore
-docker run --rm --volume hype-bot-data-restore:/data \
-  --volume "$HOME/hype-bot-backups:/backup:ro" alpine:3.20 \
-  sh -c 'tar -xzf /backup/REPLACE_WITH_BACKUP.tar.gz -C /data && chown -R 10001:10001 /data'
-docker rm hype-bot
-docker run -d --name hype-bot --restart unless-stopped \
-  --publish 127.0.0.1:8000:8000 --env-file .env \
-  --volume hype-bot-data-restore:/data hype-bot:local
-```
-
-Check `docker inspect --format '{{.State.Health.Status}}' hype-bot`, sign in, and confirm channels and recent history before treating a restore as complete. Keep the old volume until the restored instance is verified. The database backup must be paired with the matching `APP_ENCRYPTION_KEY`; restoring encrypted credentials with a different key will fail.
-
-### 6. Upgrade and rollback
-
-Build the candidate image before stopping the running container. Keep the old image tag and take a fresh database backup before upgrading, especially before schema changes. The app initializes/migrates its database when it starts; use the same named volume for a normal upgrade.
-
-```sh
-docker tag hype-bot:local hype-bot:rollback
-docker build -t hype-bot:local .
-docker stop hype-bot
-docker rm hype-bot
-docker run -d --name hype-bot --restart unless-stopped \
-  --publish 127.0.0.1:8000:8000 --env-file .env \
-  --volume hype-bot-data:/data hype-bot:local
-docker inspect --format '{{.State.Health.Status}}' hype-bot
-docker logs --since 10m hype-bot
-```
-
-If the new image fails, remove that container and rerun the same `docker run` command with `hype-bot:rollback`. A rollback of the image may not reverse a database schema migration; restore the pre-upgrade backup to a separate volume if the prior image cannot read the upgraded database. Keep the backup until the upgraded app is confirmed healthy.
-
-### YouTube polling quota
-
-The app polls immediately at startup and then after each `POLL_INTERVAL_MINUTES` (default 60; values below 15 are clamped to 15). Each configured channel uses one `search.list` request per poll. Google's current default is 100 `search.list` calls per day; four channels polled hourly use 96 of those calls. A `search.list` request is in its own daily bucket (currently 100 calls/day); it is not 100 units in the shared quota. The current scan also calls `playlistItems.list` and usually one `videos.list` request per channel per poll, using the separate combined daily quota for other methods. Check the project's YouTube Data API quotas in Google Cloud Console; quotas currently reset at midnight Pacific Time. Avoid shortening the interval: four channels at 15 minutes would request 384 `search.list` calls/day, above the default. Channel resolution also makes a `channels.list` call. See Google's [quota calculator](https://developers.google.com/youtube/v3/determine_quota_cost).
-
-### Future YouTube push callbacks
-
-The current app polls and has no public callback endpoint. YouTube's documented push option uses WebSub/PubSubHubbub: a callback server subscribes through Google's hub to a channel's uploads feed and receives Atom notifications for uploads and video title/description updates. It requires a publicly reachable callback URL; the VPN-only dashboard should remain private. A future implementation would need a separately exposed, HTTPS callback route, subscription renewal/verification, notification validation and idempotent event processing, while retaining polling as a fallback. Upload notifications alone do not replace polling for scheduled/live-stream state. See Google's [push notification guide](https://developers.google.com/youtube/v3/guides/push_notifications).
-
-## Notification destinations
-
-In the authenticated dashboard, save one Discord webhook and connect one Facebook Page. Discord webhook URLs and Meta Page access tokens are encrypted in SQLite using `APP_ENCRYPTION_KEY`. Use the explicit test buttons only when you intend to send a test message or post.
-
-For Facebook, create/configure a Meta app with Facebook Login and the `pages_show_list` and `pages_manage_posts` permissions. Add `${APP_BASE_URL}/destinations/facebook/callback` as an allowed OAuth redirect URI, set `META_APP_ID`, `META_APP_SECRET`, and the HTTPS `APP_BASE_URL` in `.env`, then recreate the container so it receives the new environment. The signed-in dashboard redirects through Meta; after authorization, select one managed Page. Meta may require app review or a role on the app/Page for use outside development roles. The Graph API version defaults to `v26.0` and can be changed with `META_GRAPH_VERSION`.
-
-The dashboard stores independent upload/stream templates for Discord and Facebook. Supported placeholders are `{title}`, `{channel}`, `{url}`, `{event_type}`, and `{scheduled_time}`. Each newly detected event gets an idempotent delivery for each configured destination. Temporary network, rate-limit, and provider server errors retry with bounded exponential backoff; permanent errors remain visible in delivery history.
-
-The YouTube polling quota and Docker CLI operational procedures are documented above. No YouTube OAuth is needed for public channel data.
-
-## Configuration
-
-| Variable | Purpose |
-| --- | --- |
-| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Single administrator account for v1 |
-| `APP_SECRET` | Signs the session cookie |
-| `APP_ENCRYPTION_KEY` | Key material for encrypting provider credentials stored in SQLite |
-| `YOUTUBE_API_KEY` | YouTube Data API v3 key with the API enabled in Google Cloud Console; required for channel resolution and monitoring |
-| `META_APP_ID`, `META_APP_SECRET` | Meta app credentials for Facebook Login |
-| `META_GRAPH_VERSION` | Graph API version; defaults to `v26.0` |
-| `APP_BASE_URL` | HTTPS dashboard URL used for the Meta OAuth redirect; register its callback URL in the Meta app |
-| `COOKIE_SECURE`, `PORT` | Enable secure session cookies behind HTTPS; app's internal port |
-| `POLL_INTERVAL_MINUTES` | Desired provider polling interval; defaults to 60 minutes |
-
-Do not commit `.env`, database files, access tokens, or Discord webhook URLs.
-
-## Current status
-
-Milestones 1–3 provide the protected dashboard, signed admin sessions, persistent SQLite state, YouTube channel monitoring, event history, encrypted Discord and Facebook Page connections, platform-specific templates, and retryable delivery history. Milestone 4 documents Debian Docker CLI deployment and operations, with named-volume restart persistence verified.
+For backups, rollback, logs, YouTube quota, and other advanced notes, see [OPERATIONS.md](OPERATIONS.md).

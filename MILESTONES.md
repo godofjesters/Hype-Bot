@@ -32,3 +32,11 @@
 - [ ] **Per-channel Facebook routing:** authorize multiple managed Pages and assign a Facebook Page to each monitored YouTube channel. Route business channel alerts only to the business Page and personal channel alerts only to the personal Page; keep Discord configuration global.
 - [ ] Add YouTube push notifications if public callback access becomes available.
 - [ ] Evaluate multi-user accounts after the single-admin version is in use.
+
+## Debian release and Facebook verification (in progress)
+
+- [ ] Deploy the release candidate from `/opt/hype-bot` on Debian 12, with host port `8018` forwarded to container port `8000` and Nginx Proxy Manager restricted to VPN access.
+- [ ] Confirm health, HTTPS login, channel polling, and persistent state after a container restart on the Debian server.
+- [ ] Configure the production HTTPS `APP_BASE_URL` and exact Meta OAuth redirect, authorize the Meta app, and select one managed Facebook Page.
+- [ ] Publish and verify the explicit Facebook test post, then verify one real detected event is delivered once using the configured template.
+- [ ] Create the `v1.0` release only after the deployment and Facebook checks pass; per-channel Page routing remains a follow-up milestone.

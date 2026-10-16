@@ -6,7 +6,7 @@ Hype Bot is a private, single-team web app that monitors YouTube channels and se
 
 ## Current product decisions
 
-- Deploy on Debian 12 as a Docker container started with `docker run`; keep the dashboard behind a VPN. Store the container deployment settings under `/opt/hype-bot` on the Debian server. Meta OAuth requires the configured HTTPS `APP_BASE_URL` and an exact redirect URL registered in the Meta app.
+- Deploy on Debian 12 as a Docker container started with `docker run`; keep the dashboard behind a VPN. Store the container deployment settings under `/opt/hype-bot` on the Debian server. Publish host port `8018` to the app's internal port `8000` for the Nginx Proxy Manager upstream. Meta OAuth requires the configured HTTPS `APP_BASE_URL` and an exact redirect URL registered in the Meta app.
 - Use one admin login for v1. Keep authentication code separable so multiple users can be added later.
 - Monitor up to four channels hourly by default. The default YouTube `search.list` allowance is 100 calls/day; four channels checked hourly use 96 calls/day.
 - Poll YouTube in v1; public YouTube push callbacks are a possible later milestone.
