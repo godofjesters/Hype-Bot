@@ -31,6 +31,7 @@
 
 ## Future
 
+- [ ] **Twitch schedule monitoring:** add Twitch as an optional event source alongside YouTube. Let users configure Twitch developer app credentials and monitored Twitch channels, poll published stream schedules, and route alerts through the existing destinations with duplicate prevention. Account for streams that go live without a published schedule.
 - [ ] Expand Hosting & HTTPS guidance with a provider-neutral overview and an Apache2 reverse-proxy example; keep Nginx Proxy Manager as one option, not a requirement.
 - [ ] **Per-channel Facebook routing:** authorize multiple managed Pages and assign a Facebook Page to each monitored YouTube channel. Route business channel alerts only to the business Page and personal channel alerts only to the personal Page; keep Discord configuration global.
 - [ ] Add YouTube push notifications if public callback access becomes available.

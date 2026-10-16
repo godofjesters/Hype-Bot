@@ -35,6 +35,7 @@ Hype Bot is a private, single-team web app that monitors YouTube channels and se
 
 ## Planned follow-up
 
+- Add optional Twitch scheduled-stream monitoring as a separate event source. Use Twitch developer app credentials and the schedule API where possible, reuse existing notification destinations and delivery idempotency, and consider how to detect streams that start without a published schedule.
 - Replace the single global Facebook Page destination with multiple authorized Pages and a per-YouTube-channel Page assignment. Preserve the global Discord webhook. Verify routing with distinct business and personal channel/Page pairs before considering this workflow complete.
 
 ## Local development and deployment
