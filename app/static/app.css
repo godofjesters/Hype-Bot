@@ -94,6 +94,16 @@ time { color: #8293a6; font-size: 11px; }
 .setup-note ol { margin: 8px 0 12px; padding-left: 22px; }
 .setup-note li { margin: 5px 0; padding-left: 3px; }
 .setup-note a, .provider-link { color: #a9caff; text-decoration: underline; text-underline-offset: 2px; }
+.page-create-help { overflow: hidden; margin: 14px 0 16px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); }
+.page-create-help summary { display: flex; align-items: center; gap: 9px; padding: 12px 15px; color: var(--text); cursor: pointer; font-weight: 700; list-style: none; }
+.page-create-help summary::-webkit-details-marker { display: none; }
+.page-create-help summary::before { display: inline-flex; width: 20px; height: 20px; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 5px; color: var(--accent); content: "+"; font-size: 15px; line-height: 1; }
+.page-create-help[open] summary { border-bottom: 1px solid var(--border); }
+.page-create-help[open] summary::before { content: "−"; }
+.page-create-help summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+.page-create-help > p, .page-create-help > ol { margin-right: 16px; margin-left: 16px; }
+.page-create-help > p { margin-top: 12px; }
+.page-create-help > ol { margin-bottom: 14px; }
 .provider-link { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 650; }
 .callback-url { display: block; overflow-wrap: anywhere; margin: 10px 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 7px; background: rgba(0,0,0,.18); }
 .setup-status { margin-top: 16px; }

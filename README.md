@@ -130,7 +130,7 @@ Run this `docker run` command only for the first install. If the container alrea
 
 ### 4. Point Nginx Proxy Manager to Hype Bot
 
-Nginx Proxy Manager (NPM) is the web page you already use to manage your proxy hosts and certificates. These steps add one entry that sends requests for your Hype Bot web address to the app on your Debian server.
+Nginx Proxy Manager (NPM) is the web page you already use to manage your proxy hosts and certificates. These steps add one entry that sends requests for your Hype Bot web address to the app on your Debian server. Your main website can stay hosted elsewhere. If an existing hostname such as home.yourdomain.com already points to NPM, create a CNAME for the new Hype Bot subdomain (Host/Name hype, Target home.yourdomain.com). Alternatively, create an A record for hype with the same public IPv4 address as home. Do not change the main domain or existing home record, and never use a private LAN IP such as 192.168.x.x in public DNS. Wait for DNS to resolve before requesting an HTTP-validated certificate.
 
 Before opening NPM, decide on the web address you will use, such as `hypebot.example.com`. Replace that example with your own domain everywhere below. In `.env`, `APP_BASE_URL` must be `https://` followed by that same address, with no trailing slash.
 
@@ -146,7 +146,7 @@ Before opening NPM, decide on the web address you will use, such as `hypebot.exa
    - **Forward Port:** `8018` (the port Docker published for Hype Bot)
 
 4. For **Access List**, choose the list you already use to limit your private sites to VPN users. Do not choose **Publicly Accessible**. If you do not have a VPN-only access list yet, set that up before making Hype Bot reachable through NPM.
-5. Leave the other options at their defaults and select **Save**.
+5. Turn on **Block Common Exploits**. Leave **Cache Assets** and **Websockets Support** off, then select **Save**.
 
 #### Add HTTPS
 
@@ -155,7 +155,7 @@ Before opening NPM, decide on the web address you will use, such as `hypebot.exa
 3. If you already have a certificate for this exact domain, select it. Otherwise choose the option to request a new Let's Encrypt certificate, enter your email address, accept the terms, and save.
 4. If shown, enable **Force SSL**, then select **Save**.
 
-For a new Let's Encrypt certificate, the domain's public DNS must point to your home/server public IP, and your router/firewall must allow inbound port `80` to NPM while the certificate is requested. NPM uses that connection to prove you control the domain. Keep Docker's Hype Bot port `8018` private; do not forward `8018` from your router to the Internet. If you already have a working certificate for the domain, select it instead of requesting another one.
+If NPM runs on a different computer from Docker Desktop, use the desktop computer's LAN IP as the Forward Hostname / IP; localhost will not work across computers. Publish Hype Bot on a LAN-reachable host port (for example, 8018:8000 rather than 127.0.0.1:8018:8000) and restrict inbound port 8018 with the desktop firewall so only the NPM host can reach it. Do not forward port 8018 from the Internet. For a new Let's Encrypt certificate, the domain's public DNS must point to your home/server public IP, and your router/firewall must allow inbound port `80` to NPM while the certificate is requested. NPM uses that connection to prove you control the domain. Keep Docker's Hype Bot port `8018` private; do not forward `8018` from your router to the Internet. If you already have a working certificate for the domain, select it instead of requesting another one.
 
 After saving, open `https://` followed by your Hype Bot domain in a browser while connected to your VPN. For example, open `https://hypebot.example.com`—not the raw IP and port. NPM's **Domain Names** field is the browser address; the **Forward Hostname / IP** and **Forward Port** fields tell NPM where the app is on your local network.
 
@@ -182,9 +182,29 @@ When a channel is first added, Hype Bot announces its upcoming public streams. I
 
 ## Connect Facebook
 
+Hype Bot can publish to a Facebook **Page**, not to a personal Facebook profile. A Page can represent a creator, hobby, or brand; it does not have to be a business. The Facebook account you authorize must have permission to create content on the Page. The current version sends all Facebook alerts to one selected Page.
+
+### If you need to create a Page
+
+1. Sign in to Facebook with the account you plan to connect to Hype Bot.
+2. Open [Facebook's Create a Page screen](https://www.facebook.com/pages/create/).
+3. Enter a Page name, choose a fitting category (for example, Digital Creator), add an optional description, and create the Page.
+4. Make sure that same account has permission to create content on the Page. See [Facebook Page access settings](https://www.facebook.com/help/187316341316631) if you need to check or change access.
+
+### Create the Meta app
+
+1. Register for a [Meta for Developers account](https://developers.facebook.com/) if you do not already have one.
+2. From [My Apps](https://developers.facebook.com/apps/), choose **Create App**. Enter an app name and a contact email associated with the Facebook account you use to manage Pages. Use an inbox you check regularly; Meta may contact you about the app.
+3. Under **Use cases**, select **Manage everything on your Page**. In the creation wizard shown here, this Page use case cannot be selected together with **Authenticate and request data from users with Facebook Login**. Choose the Page management use case for Hype Bot's Page publishing.
+4. Under **Business**, you can choose **I don't want to connect a business portfolio yet** and associate one later. Meta notes that business verification may be required to complete verification and gain data access.
+5. Review the **Requirements** and **Overview** screens, then choose **Create app**.
+6. In the app dashboard, open **Customize the Manage everything on your Page use case** and configure the Page permissions and login callback described below.
+
+### Configure permissions and OAuth
+
 Facebook requires an HTTPS URL with a domain name that routes to Hype Bot. It cannot use an IP address by itself or plain `http://localhost:8018`. Where Hype Bot is hosted is up to you; the key requirement is that the domain-based HTTPS address and callback are configured for Meta.
 
-1. The Meta app needs Facebook Login and Page permissions `pages_show_list` and `pages_manage_posts`. In its Facebook Login settings, add this redirect address, replacing the example domain with your own:
+1. In the Page use case's permissions, verify that both `pages_show_list` and `pages_manage_posts` show **Ready for testing**. Hype Bot needs these to list your Pages and publish posts. Skip unrelated permissions. For a private development test, leave **Actions → Add to App Review** alone; review is for requesting broader access. Return to the app dashboard, expand **Facebook Login for Business** in the left sidebar, and choose **Settings**. Leave **Client OAuth login**, **Web OAuth login**, **Enforce HTTPS**, and **Use Strict Mode for redirect URIs** enabled. Do not enter the callback in **Redirect URI Validator**; that box only checks a URI. Enter Hype Bot’s exact callback in **Valid OAuth Redirect URIs** (the field lower on the page), then choose **Save Changes**:
 
    ```text
    https://hypebot.example.com/destinations/facebook/callback
@@ -203,7 +223,7 @@ Facebook requires an HTTPS URL with a domain name that routes to Hype Bot. It ca
 4. Open Hype Bot through its HTTPS domain. On the **Facebook** page, select **Authorize with Meta**, sign in, and choose the Page. The dashboard also shows the setup checklist and callback URL.
 5. Select **Publish test post** when you are ready. It creates a real, visible post on the selected Page.
 
-The current version sends Facebook alerts to one selected Page for all channels. It cannot yet send one channel to a business Page and another to a personal Page.
+The current version sends Facebook alerts to one selected Page for all channels. It cannot yet send one channel to a business Page and another to a creator Page.
 
 ## Stop, start, and update
 
