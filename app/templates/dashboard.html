@@ -1,213 +1,86 @@
 {% extends "base.html" %}
-{% block title %}Dashboard · Hype Bot{% endblock %}
+{% block title %}{{ page_title }} · Hype Bot{% endblock %}
 {% block content %}
 <div class="page-heading">
-  <div>
-    <p class="eyebrow">YouTube monitoring</p>
-    <h1>Hype Bot</h1>
-    <p class="muted">Manage your channels, notifications, and recent activity.</p>
-  </div>
-  <span class="status-pill"><span class="status-dot"></span> App online</span>
+  <div><p class="eyebrow">Hype Bot</p><h1>{{ page_title }}</h1><p class="muted">{{ page_description }}</p></div>
+  {% if page == 'overview' %}<span class="status-pill"><span class="status-dot"></span> App online</span>{% endif %}
 </div>
 
-{% if channel_error %}
-<p class="alert">
-  {% if channel_error == 'missing_key' %}Set YOUTUBE_API_KEY in your deployment environment, then restart the app.
+{% if channel_error %}<p class="alert">
+  {% if channel_error == 'missing_key' %}YouTube monitoring needs an API key. Add YOUTUBE_API_KEY to the app's .env file and restart Hype Bot.
   {% elif channel_error == 'channel_limit' %}You can monitor up to four channels.
   {% else %}Could not resolve that YouTube channel. Check the link or handle and try again.{% endif %}
-</p>
-{% endif %}
+</p>{% endif %}
 {% set destination_error = request.query_params.get('error') %}
-{% if destination_error %}<p class="alert">{{ {'discord_url':'Enter a Discord webhook URL.', 'discord_missing':'Save a Discord webhook first.', 'discord_test':'Discord test failed; check the webhook and try again.', 'template':'Template is empty or uses an unsupported field.', 'theme':'Choose a valid dashboard theme.', 'meta_config':'Set META_APP_ID, META_APP_SECRET, and APP_BASE_URL before connecting Facebook.', 'meta_auth':'Meta authorization did not complete. Try connecting again.', 'no_pages':'Meta authorized successfully but returned no managed Pages.', 'page_select':'Choose a Page from the available list.', 'facebook_missing':'Connect a Facebook Page first.', 'facebook_test':'Facebook test failed; check Page permissions and try again.'}.get(destination_error, 'Could not save destination settings.') }}</p>{% endif %}
-{% if flash %}<p class="success-message">{{ {'channel_added':'Channel added. The first scan will establish its upload baseline and announce upcoming streams.', 'settings_saved':'Channel settings saved.', 'channel_removed':'Channel removed.', 'discord_saved':'Discord webhook saved encrypted.', 'templates_saved':'Message templates saved.', 'discord_test':'Discord test message sent.', 'theme_saved':'Dashboard theme saved.', 'pages_loaded':'Managed Pages loaded. Select one to finish connecting.', 'facebook_saved':'Facebook Page connected.', 'facebook_test':'Facebook test post published.'}.get(flash, 'Saved.') }}</p>{% endif %}
+{% if destination_error in ['discord_url', 'discord_missing', 'discord_test', 'template', 'theme', 'meta_config', 'meta_auth', 'no_pages', 'page_select', 'facebook_missing', 'facebook_test'] %}<p class="alert">{{ {'discord_url':'Enter a valid Discord webhook URL.', 'discord_missing':'Save a Discord webhook first.', 'discord_test':'Discord test failed; check the webhook and try again.', 'template':'Template is empty or uses an unsupported field.', 'theme':'Choose a valid dashboard theme.', 'meta_config':'Set META_APP_ID, META_APP_SECRET, and APP_BASE_URL in the deployment settings before connecting Facebook.', 'meta_auth':'Meta authorization did not complete. Try connecting again.', 'no_pages':'Meta authorized successfully but returned no managed Pages.', 'page_select':'Choose a Page from the available list.', 'facebook_missing':'Connect a Facebook Page first.', 'facebook_test':'Facebook test failed; check Page permissions and try again.'}.get(destination_error, 'Could not save these settings.') }}</p>{% endif %}
+{% if flash %}<p class="success-message">{{ {'channel_added':'Channel added. Its first scan will establish the upload baseline and announce upcoming streams.', 'settings_saved':'Channel settings saved.', 'channel_removed':'Channel removed.', 'discord_saved':'Discord webhook saved encrypted.', 'templates_saved':'Message templates saved.', 'discord_test':'Discord test message sent.', 'theme_saved':'Dashboard theme saved.', 'pages_loaded':'Managed Pages loaded. Select one to finish connecting.', 'facebook_saved':'Facebook Page connected.', 'facebook_test':'Facebook test post published.'}.get(flash, 'Saved.') }}</p>{% endif %}
 
-<div class="dashboard-tabs" role="tablist" aria-label="Dashboard sections">
-  <button class="dashboard-tab" id="tab-overview" type="button" role="tab" aria-controls="panel-overview" aria-selected="true">Overview</button>
-  <button class="dashboard-tab" id="tab-channels" type="button" role="tab" aria-controls="panel-channels" aria-selected="false" tabindex="-1">Channels <span>{{ channels|length }}/4</span></button>
-  <button class="dashboard-tab" id="tab-notifications" type="button" role="tab" aria-controls="panel-notifications" aria-selected="false" tabindex="-1">Notifications</button>
-  <button class="dashboard-tab" id="tab-activity" type="button" role="tab" aria-controls="panel-activity" aria-selected="false" tabindex="-1">Activity</button>
-  <button class="dashboard-tab" id="tab-settings" type="button" role="tab" aria-controls="panel-settings" aria-selected="false" tabindex="-1">Settings</button>
-</div>
-
-<section class="tab-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
+{% if page == 'overview' %}
   <div class="card-grid dashboard-summary">
-    <article class="status-card">
-      <span class="card-icon">YT</span>
-      <h2>Channel monitoring</h2>
-      <p>{{ channels|length }} of 4 channels · checks every {{ poll_minutes }} minutes.</p>
-      <button class="text-action" type="button" data-open-tab="tab-channels">Manage channels →</button>
-    </article>
-    <article class="status-card">
-      <span class="card-icon">DC</span>
-      <h2>Discord</h2>
-      <p>{% if discord_ready %}Webhook connected{% else %}Not connected{% endif %}</p>
-      <button class="text-action" type="button" data-open-tab="tab-notifications">Notification settings →</button>
-    </article>
-    <article class="status-card">
-      <span class="card-icon">FB</span>
-      <h2>Facebook Page</h2>
-      <p>{{ facebook_page or 'Not connected' }}</p>
-      <button class="text-action" type="button" data-open-tab="tab-notifications">Notification settings →</button>
-    </article>
+    <article class="status-card"><span class="card-icon">YT</span><h2>Channel monitoring</h2><p>{{ channels|length }} of 4 channels · checks every {{ poll_minutes }} minutes.</p><a class="text-action" href="/channels">Manage channels →</a></article>
+    <article class="status-card"><span class="card-icon">DC</span><h2>Discord</h2><p>{% if discord_ready %}Webhook connected{% else %}Not connected{% endif %}</p><a class="text-action" href="/notifications/discord">Set up Discord →</a></article>
+    <article class="status-card"><span class="card-icon">FB</span><h2>Facebook Page</h2><p>{{ facebook_page or 'Not connected' }}</p><a class="text-action" href="/notifications/facebook">Set up Facebook →</a></article>
   </div>
-  <aside class="notice"><strong>Monitoring quota</strong><span>One search.list request per channel per check uses 96 of the 100 daily search calls at four channels checked hourly. Public YouTube data uses an API key; no YouTube OAuth is needed.</span></aside>
-</section>
+  <aside class="notice"><strong>Monitoring quota</strong><span>At four channels checked hourly, Hype Bot uses 96 of the default 100 daily YouTube search calls. Public YouTube data uses an API key; no YouTube sign-in is needed.</span></aside>
+  <section class="panel quick-start"><div class="panel-heading"><div><h2>Get started</h2><p class="muted">Follow these pages to connect your channels and alert destinations.</p></div></div><div class="quick-links"><a href="/channels">1. Add YouTube channels <span>→</span></a><a href="/notifications/discord">2. Set up Discord <span>→</span></a><a href="/notifications/facebook">3. Set up Facebook <span>→</span></a><a href="/hosting">Hosting &amp; HTTPS help <span>→</span></a><a href="/activity">4. Check delivery activity <span>→</span></a></div></section>
 
-<section class="tab-panel" id="panel-channels" role="tabpanel" aria-labelledby="tab-channels" tabindex="0" hidden>
+{% elif page == 'channels' %}
   <section class="panel">
-    <div class="panel-heading">
-      <div><h2>Monitored channels <span class="subtle-label">{{ channels|length }} / 4</span></h2>
-        <p class="muted">{% if youtube_ready %}YouTube Data API connected{% else %}Add YOUTUBE_API_KEY to enable channel setup and polling{% endif %}</p>
-      </div>
-    </div>
-    {% if channels %}
-    <div class="channel-list">
-      {% for channel in channels %}
-      <article class="channel-item">
-        <div class="channel-title">
-          <div><h3>{{ channel.title }}</h3><a class="channel-link" href="https://www.youtube.com/channel/{{ channel.channel_id }}" target="_blank" rel="noopener">youtube.com/channel/{{ channel.channel_id }}</a></div>
-          <span class="badge {% if channel.last_error %}error-badge{% elif channel.last_checked_at %}complete{% endif %}">{% if channel.last_error %}Check failed{% elif channel.last_checked_at %}Monitoring{% else %}Waiting for first scan{% endif %}</span>
-        </div>
-        {% if channel.last_error %}<p class="channel-error">{{ channel.last_error }}</p>{% endif %}
-        <p class="channel-meta">{% if channel.last_checked_at %}Last checked <time>{{ channel.last_checked_at }}</time>{% else %}First scan runs shortly after startup{% endif %}</p>
-        <div class="channel-actions">
-          <form class="settings-form" action="/channels/{{ channel.channel_id }}/settings" method="post">
-            <input type="hidden" name="csrf" value="{{ csrf_token }}">
-            <label class="check-label"><input type="checkbox" name="uploads" {% if channel.enabled_uploads %}checked{% endif %}> Uploads</label>
-            <label class="check-label"><input type="checkbox" name="streams" {% if channel.enabled_streams %}checked{% endif %}> Streams</label>
-            <label>Stream alert timing
-              <select name="stream_timing"><option value="scheduled" {% if channel.stream_timing == 'scheduled' %}selected{% endif %}>When YouTube lists the scheduled stream</option><option value="start" {% if channel.stream_timing == 'start' %}selected{% endif %}>When stream begins</option></select>
-            </label>
-            <button class="small-button" type="submit">Save settings</button>
-          </form>
-          <form action="/channels/{{ channel.channel_id }}/delete" method="post" onsubmit="return confirm('Remove this channel and its monitoring history?')">
-            <input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="quiet-button danger" type="submit">Remove</button>
-          </form>
-        </div>
-      </article>
-      {% endfor %}
-    </div>
-    {% else %}<p class="empty-state">No channels yet. Add one below to begin monitoring.</p>{% endif %}
-    {% if channels|length < 4 %}
-    <form class="add-channel" action="/channels" method="post">
-      <input type="hidden" name="csrf" value="{{ csrf_token }}">
-      <label for="channel-url">Add a channel</label>
-      <div class="add-row"><input id="channel-url" name="channel_url" placeholder="Channel URL, @handle, or /user/username" required><button class="primary-button" type="submit">Add channel</button></div>
-      <p class="muted help-text">Supports channel IDs, @handles, and legacy username URLs.</p>
-    </form>
-    {% endif %}
-  </section>
-</section>
-
-<section class="tab-panel" id="panel-notifications" role="tabpanel" aria-labelledby="tab-notifications" tabindex="0" hidden>
-  <section class="panel">
-    <div class="panel-heading"><div><h2>Notification destinations</h2><p class="muted">Each new event gets a delivery record for every connected destination.</p></div></div>
-    <div class="channel-list">
-      <article class="channel-item"><div class="channel-title"><div><h3>Discord</h3><p class="muted">{% if discord_ready %}Webhook configured{% else %}Not connected{% endif %}</p></div></div>
-        <form class="add-channel" action="/destinations/discord" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><label for="discord-webhook">Webhook URL</label><div class="add-row"><input id="discord-webhook" type="password" name="webhook" autocomplete="new-password" placeholder="https://discord.com/api/webhooks/…" required><button class="primary-button" type="submit">Save webhook</button></div></form>
-        {% if discord_ready %}<form action="/destinations/discord/test" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="small-button" type="submit">Send test message</button></form>{% endif %}
-      </article>
-      <article class="channel-item"><div class="channel-title"><div><h3>Facebook Page</h3><p class="muted">{{ facebook_page or 'Not connected' }}</p></div></div>
-        {% if meta_ready %}<form action="/destinations/facebook/connect" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="primary-button" type="submit">Authorize with Meta</button></form>{% else %}<p class="muted">Configure Meta app credentials and the public HTTPS app URL to connect.</p>{% endif %}
-        {% if page_options %}<form action="/destinations/facebook/page" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><label>Managed Page<select name="page_id" required>{% for page in page_options %}<option value="{{ page.id }}">{{ page.name }}</option>{% endfor %}</select></label><button class="small-button" type="submit">Use this Page</button></form>{% endif %}
-        {% if facebook_page %}<form action="/destinations/facebook/test" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="small-button" type="submit">Publish test post</button></form>{% endif %}
-      </article>
-    </div>
-  </section>
-  <section class="panel">
-    <div class="panel-heading"><div><h2>Message templates</h2><p class="muted">Fields: {title}, {channel}, {url}, {event_type}, {scheduled_time}</p></div></div>
-    <form action="/destinations/templates" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><div class="channel-list">
-      {% for destination in ['discord','facebook'] %}{% for kind in ['upload','stream'] %}{% set key=destination ~ '_' ~ kind %}<article class="channel-item"><label>{{ destination|title }} {{ kind|title }}<textarea name="{{ key }}" rows="3" required>{{ message_templates[key] }}</textarea></label><p class="muted">Preview: {{ template_previews[key] }}</p></article>{% endfor %}{% endfor %}
-    </div><button class="primary-button" type="submit">Save all templates</button></form>
-  </section>
-</section>
-
-<section class="tab-panel" id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" tabindex="0" hidden>
-  <section class="panel theme-settings">
-    <div class="panel-heading"><div><h2>Dashboard appearance</h2><p class="muted">Choose the visual style for this dashboard. Your choice is saved on this installation.</p></div></div>
-    <form action="/settings/theme" method="post" class="theme-form">
-      <input type="hidden" name="csrf" value="{{ csrf_token }}">
-      <fieldset class="theme-options">
-        <legend>Theme</legend>
-        <label class="theme-option {% if theme == 'business' %}selected{% endif %}">
-          <input type="radio" name="theme" value="business" {% if theme == 'business' %}checked{% endif %}>
-          <span class="theme-swatch business-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span><strong>Business</strong><small>Light, clean, and focused</small></span>
-        </label>
-        <label class="theme-option {% if theme == 'gaming' %}selected{% endif %}">
-          <input type="radio" name="theme" value="gaming" {% if theme == 'gaming' %}checked{% endif %}>
-          <span class="theme-swatch gaming-swatch" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span><strong>Gaming</strong><small>Dark surfaces with neon accents</small></span>
-        </label>
-      </fieldset>
-      <button class="primary-button" type="submit">Save theme</button>
-    </form>
-  </section>
-</section>
-
-<section class="tab-panel" id="panel-activity" role="tabpanel" aria-labelledby="tab-activity" tabindex="0" hidden>
-  <section class="panel">
-    <div class="panel-heading"><div><h2>Detected events</h2><p class="muted">New uploads and stream alerts grouped by YouTube channel.</p></div><span class="subtle-label">Latest 12 per channel</span></div>
-    {% if history_by_channel %}
-      {% for group in history_by_channel %}
-      <article class="channel-item">
-        <div class="channel-title"><h3>{{ group.title }}</h3></div>
-        {% if group.events %}<ul class="event-list">
-          {% for event in group.events %}<li><span class="event-marker"></span><span class="event-message"><strong>{{ event.event_type|title }}</strong> — <a href="{{ event.url }}" target="_blank" rel="noopener">{{ event.title }}</a></span><time>{{ event.event_time }}</time></li>{% endfor %}
-        </ul>{% else %}<p class="muted channel-empty">No events detected for this channel yet.</p>{% endif %}
-      </article>
-      {% endfor %}
-    {% else %}<p class="empty-state">Add a channel to see its detected events here.</p>{% endif %}
+    <div class="panel-heading"><div><h2>Monitored channels <span class="subtle-label">{{ channels|length }} / 4</span></h2><p class="muted">{% if youtube_ready %}YouTube connection ready{% else %}YouTube API key not configured{% endif %}</p></div></div>
+    <aside class="setup-note"><strong>Before adding a channel</strong><ol><li>Open the YouTube channel page and copy its web address. You can paste a channel URL, an <code>@handle</code>, or a legacy username URL below.</li><li>Hype Bot also needs a YouTube Data API key. In <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console ↗</a>, create/select a project, enable <b>YouTube Data API v3</b>, then create an API key under <b>APIs &amp; Services → Credentials</b>. Restrict the key to YouTube Data API v3.</li><li>Ask the person who runs Hype Bot to add that key as <code>YOUTUBE_API_KEY</code> in the private deployment settings and restart the app. This key is not your YouTube password.</li></ol><a class="provider-link" href="https://developers.google.com/youtube/v3/getting-started" target="_blank" rel="noopener">Google's YouTube API setup guide ↗</a></aside>
+    {% if channels %}<div class="channel-list">
+      {% for channel in channels %}<article class="channel-item">
+        <div class="channel-title"><div><h3>{{ channel.title }}</h3><a class="channel-link" href="https://www.youtube.com/channel/{{ channel.channel_id }}" target="_blank" rel="noopener">youtube.com/channel/{{ channel.channel_id }}</a></div><span class="badge {% if channel.last_error %}error-badge{% elif channel.last_checked_at %}complete{% endif %}">{% if channel.last_error %}Check failed{% elif channel.last_checked_at %}Monitoring{% else %}Waiting for first scan{% endif %}</span></div>
+        {% if channel.last_error %}<p class="channel-error">{{ channel.last_error }}</p>{% endif %}<p class="channel-meta">{% if channel.last_checked_at %}Last checked <time>{{ channel.last_checked_at }}</time>{% else %}First scan runs shortly after startup{% endif %}</p>
+        <div class="channel-actions"><form class="settings-form" action="/channels/{{ channel.channel_id }}/settings" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><label class="check-label"><input type="checkbox" name="uploads" {% if channel.enabled_uploads %}checked{% endif %}> Uploads</label><label class="check-label"><input type="checkbox" name="streams" {% if channel.enabled_streams %}checked{% endif %}> Streams</label><label>Stream alert timing<select name="stream_timing"><option value="scheduled" {% if channel.stream_timing == 'scheduled' %}selected{% endif %}>When stream is scheduled</option><option value="start" {% if channel.stream_timing == 'start' %}selected{% endif %}>When stream begins</option></select></label><button class="small-button" type="submit">Save settings</button></form><form action="/channels/{{ channel.channel_id }}/delete" method="post" onsubmit="return confirm('Remove this channel and its monitoring history?')"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="quiet-button danger" type="submit">Remove</button></form></div>
+      </article>{% endfor %}
+    </div>{% else %}<p class="empty-state">No channels yet. Add one below to begin monitoring.</p>{% endif %}
+    {% if channels|length < 4 %}<form class="add-channel" action="/channels" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><label for="channel-url">YouTube channel link</label><div class="add-row"><input id="channel-url" name="channel_url" placeholder="https://youtube.com/@yourchannel" required><button class="primary-button" type="submit">Add channel</button></div></form>{% endif %}
   </section>
 
-  <section class="panel"><div class="panel-heading"><div><h2>Delivery status</h2><p class="muted">Latest delivery attempts for each destination.</p></div><span class="subtle-label">Latest 20</span></div>
-  {% if deliveries %}<ul class="event-list">{% for delivery in deliveries %}<li><span class="event-marker {% if delivery.status == 'failed' %}error{% elif delivery.status == 'sent' %}complete{% endif %}"></span><span class="event-message"><strong>{{ delivery.destination|title }} · {{ delivery.event_type|title }}</strong> — {{ delivery.title }} · {{ delivery.channel_title }}<br><span class="muted">{{ delivery.status|title }} · {{ delivery.attempts }} attempt(s){% if delivery.last_error %} · {{ delivery.last_error }}{% endif %}</span></span><time>{{ delivery.updated_at }}</time></li>{% endfor %}</ul>{% else %}<p class="empty-state">No destination deliveries yet. New events are queued when a destination is connected.</p>{% endif %}</section>
-
-  <section class="panel">
-    <div class="panel-heading"><div><h2>System activity</h2><p class="muted">Recent startup and monitoring errors.</p></div><span class="subtle-label">Persistent history</span></div>
-    {% if events %}<ul class="event-list">{% for event in events %}<li><span class="event-marker {{ event.level }}"></span><span class="event-message">{{ event.message }}</span><time>{{ event.created_at }}</time></li>{% endfor %}</ul>{% else %}<p class="empty-state">No activity recorded yet.</p>{% endif %}
+{% elif page == 'discord' %}
+  <section class="panel"><div class="panel-heading"><div><h2>Connect Discord</h2><p class="muted">Send upload and stream alerts to a text channel in your Discord server.</p></div><span class="badge {% if discord_ready %}complete{% endif %}">{% if discord_ready %}Connected{% else %}Not connected{% endif %}</span></div>
+    <div class="setup-note"><strong>Create a webhook in Discord</strong><ol><li>Choose the server and text channel where Hype Bot should post.</li><li>In Discord, open <b>Server Settings → Integrations → Webhooks → Create Webhook</b>. Give it a name, select the destination channel, and copy the webhook URL.</li><li>You need the <b>Manage Webhooks</b> permission in that server/channel. If you do not have it, ask a server administrator to create the webhook for you or grant the permission.</li></ol><p>You do not need to invite a Hype Bot account to your server. Keep the copied webhook URL private; anyone with it can post to that channel.</p><a class="provider-link" href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks" target="_blank" rel="noopener">Discord's webhook instructions ↗</a></div>
+    <form class="add-channel" action="/destinations/discord" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><label for="discord-webhook">Paste the webhook URL</label><div class="add-row"><input id="discord-webhook" type="password" name="webhook" autocomplete="new-password" placeholder="https://discord.com/api/webhooks/…" required><button class="primary-button" type="submit">Save webhook</button></div></form>
+    {% if discord_ready %}<form class="inline-form" action="/destinations/discord/test" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="small-button" type="submit">Send test message</button><span class="muted">This sends a real message to your selected channel.</span></form>{% endif %}
   </section>
-</section>
+  <section class="panel"><div class="panel-heading"><div><h2>Discord message templates</h2><p class="muted">Customize how upload and stream alerts look. Available fields: {title}, {channel}, {url}, {event_type}, {scheduled_time}.</p></div></div>
+    <form action="/destinations/templates" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><div class="template-grid">{% for kind in ['upload','stream'] %}{% set key='discord_' ~ kind %}<article class="channel-item"><label>Discord {{ kind|title }}<textarea name="{{ key }}" rows="3" required>{{ message_templates[key] }}</textarea></label><p class="muted">Preview: {{ template_previews[key] }}</p></article>{% endfor %}</div><button class="primary-button" type="submit">Save Discord templates</button></form>
+  </section>
 
-<script>
-(() => {
-  const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
-  const panels = tabs.map((tab) => document.getElementById(tab.getAttribute('aria-controls')));
-  function selectTab(selected, focus = false) {
-    tabs.forEach((tab, index) => {
-      const active = tab === selected;
-      tab.setAttribute('aria-selected', String(active));
-      tab.tabIndex = active ? 0 : -1;
-      panels[index].hidden = !active;
-    });
-    if (focus) selected.focus();
-  }
-  tabs.forEach((tab, index) => tab.addEventListener('click', () => selectTab(tab)));
-  document.querySelectorAll('[data-open-tab]').forEach((button) => {
-    button.addEventListener('click', () => selectTab(document.getElementById(button.dataset.openTab)));
-  });
-  document.querySelector('[role="tablist"]').addEventListener('keydown', (event) => {
-    const current = tabs.indexOf(document.activeElement);
-    if (current < 0) return;
-    let next = current;
-    if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
-    else if (event.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = tabs.length - 1;
-    else return;
-    event.preventDefault();
-    selectTab(tabs[next], true);
-  });
+{% elif page == 'facebook' %}
+  <section class="panel"><div class="panel-heading"><div><h2>Connect a Facebook Page</h2><p class="muted">Authorize Hype Bot to publish alerts to a Page you manage.</p></div><span class="badge {% if facebook_page %}complete{% endif %}">{{ facebook_page or 'Not connected' }}</span></div>
+    <div class="setup-note"><strong>Before connecting</strong><ol><li>In <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">Meta for Developers ↗</a>, create an app and add/configure Facebook Login. In the app's basic settings, copy its App ID and App Secret into <code>META_APP_ID</code> and <code>META_APP_SECRET</code> in Hype Bot's private deployment settings.</li><li>Hype Bot must have an HTTPS web address using a domain name, such as <code>https://hypebot.example.com</code>. An IP address alone or <code>localhost</code> cannot be used for Meta's redirect. <a href="/hosting">Open the Hosting &amp; HTTPS guide →</a> if you need help setting up the domain and proxy.</li><li>In Facebook Login settings, add this exact callback under the valid OAuth redirect URLs:</li></ol><code class="callback-url">{{ callback_url or 'Set APP_BASE_URL in the deployment settings to show the callback URL here.' }}</code><p>The callback must exactly match the app's HTTPS address plus <code>/destinations/facebook/callback</code>. The Meta app also needs the Page permissions <code>pages_show_list</code> and <code>pages_manage_posts</code>. Meta controls which Pages appear based on the account you authorize. Meta may require app review or an app role before use outside development.</p><a class="provider-link" href="https://developers.facebook.com/docs/facebook-login/" target="_blank" rel="noopener">Meta Facebook Login documentation ↗</a></div>
+    {% if meta_ready %}<form class="inline-form" action="/destinations/facebook/connect" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="primary-button" type="submit">Authorize with Meta</button><span class="muted">You will sign in to Facebook and choose a managed Page.</span></form>{% else %}<p class="muted setup-status">Meta setup is not complete. Ask the person who installed Hype Bot to configure the Meta app credentials and HTTPS address first.</p>{% endif %}
+    {% if page_options %}<form class="inline-form" action="/destinations/facebook/page" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><label>Choose the Page for alerts<select name="page_id" required>{% for page_option in page_options %}<option value="{{ page_option.id }}" {% if page_option.name == facebook_page %}selected{% endif %}>{{ page_option.name }}</option>{% endfor %}</select></label><button class="small-button" type="submit">Use this Page</button></form>{% endif %}
+    {% if facebook_page %}<form class="inline-form" action="/destinations/facebook/test" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="small-button" type="submit">Publish test post</button><span class="muted">This creates a real post visible on the selected Page.</span></form>{% endif %}
+  </section>
+  <section class="panel"><div class="panel-heading"><div><h2>Facebook message templates</h2><p class="muted">Customize upload and stream posts. Available fields: {title}, {channel}, {url}, {event_type}, {scheduled_time}.</p></div></div><form action="/destinations/templates" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><div class="template-grid">{% for kind in ['upload','stream'] %}{% set key='facebook_' ~ kind %}<article class="channel-item"><label>Facebook {{ kind|title }}<textarea name="{{ key }}" rows="3" required>{{ message_templates[key] }}</textarea></label><p class="muted">Preview: {{ template_previews[key] }}</p></article>{% endfor %}</div><button class="primary-button" type="submit">Save Facebook templates</button></form></section>
 
-  const params = new URLSearchParams(window.location.search);
-  const channelMessages = new Set(['channel_added', 'settings_saved', 'channel_removed']);
-  const channelErrors = new Set(['missing_key', 'channel_limit']);
-  const channelError = params.has('channel_error') || channelErrors.has(params.get('error'));
-  const message = params.get('message');
-  const error = params.get('error');
-  if (channelError || channelMessages.has(message)) selectTab(document.getElementById('tab-channels'));
-  else if (message === 'theme_saved' || error === 'theme') selectTab(document.getElementById('tab-settings'));
-  else if (message || error) selectTab(document.getElementById('tab-notifications'));
-})();
-</script>
+{% elif page == 'hosting' %}
+  <section class="panel"><div class="panel-heading"><div><h2>Do you need this?</h2><p class="muted">Discord alerts and YouTube monitoring do not need a public web address. Facebook sign-in does.</p></div></div>
+    <div class="setup-note"><strong>What this setup provides</strong><p>A domain gives Hype Bot a web address. A reverse proxy such as Nginx Proxy Manager (NPM) forwards that address to the app and handles HTTPS certificates. You choose where and how to host Hype Bot; these instructions use NPM as one example.</p><p>For Facebook, the address needs HTTPS and a domain name, such as <code>https://hypebot.example.com</code>. An IP address or <code>localhost</code> by itself will not work for Meta authorization.</p></div>
+  </section>
+  <section class="panel"><div class="panel-heading"><div><h2>Nginx Proxy Manager example</h2><p class="muted">Use these steps if you manage your reverse proxy in NPM.</p></div></div>
+    <ol class="hosting-steps">
+      <li><strong>Choose the web address.</strong><p>Use a domain you control, such as <code>hypebot.example.com</code>. Replace the example with your own address.</p></li>
+      <li><strong>Point the domain to your network.</strong><p>At your domain or DNS provider, create a record for the Hype Bot address and point it to your network's public IP. If that IP changes, use a dynamic DNS service or update the record.</p></li>
+      <li><strong>Add a Proxy Host in NPM.</strong><p>Open the NPM page. Choose <b>Hosts → Proxy Hosts → Add Proxy Host</b>. On the <b>Details</b> tab, enter:</p><ul><li><b>Domain Names:</b> your Hype Bot domain. This is the address you type in your browser.</li><li><b>Scheme:</b> <code>http</code>.</li><li><b>Forward Hostname / IP:</b> the local network address of the computer running Hype Bot.</li><li><b>Forward Port:</b> <code>8018</code> for the project's Debian Docker command. This is the host port that forwards to the app's internal port <code>8000</code>.</li></ul><p>For <b>Access List</b>, choose a list that allows your VPN users. Do not choose <b>Publicly Accessible</b> for a private dashboard. Leave other options at their defaults and select <b>Save</b>.</p></li>
+      <li><strong>Add HTTPS.</strong><p>Find the new Proxy Host, open its three-dot menu, choose <b>Edit</b>, then open the <b>SSL</b> tab. Select an existing certificate for this exact domain, or request a Let's Encrypt certificate. Enable <b>Force SSL</b> if available, then save.</p><p>For a new certificate using the default HTTP validation, public DNS must point to your network and inbound port <code>80</code> must reach NPM for certificate validation and renewals. Keep Hype Bot's host port <code>8018</code> private; do not forward that port from your router to the Internet. DNS-based certificate validation may be an option if your DNS provider and NPM setup support it.</p></li>
+      <li><strong>Tell Hype Bot its HTTPS address.</strong><p>In the private <code>.env</code> file used to start the app, set <code>APP_BASE_URL</code> to <code>https://</code> plus the same domain, with no trailing slash. Set <code>COOKIE_SECURE=true</code>. Recreate the container so it loads the new settings, keeping the <code>hype-bot-data</code> volume.</p></li>
+      <li><strong>Check the setup.</strong><p>While connected to your VPN, open <code>https://</code> plus your domain and sign in. Then return to the <a href="/notifications/facebook">Facebook page</a>. The callback shown there must match the URL entered in Meta, followed by <code>/destinations/facebook/callback</code>.</p></li>
+    </ol>
+    <aside class="notice"><strong>Keep it private</strong><span>Use your VPN-only NPM Access List or an equivalent firewall rule to limit who can open the dashboard. The certificate validation port is separate from Hype Bot's private app port.</span></aside>
+    <p class="hosting-footnote">NPM labels can vary slightly between versions. If your proxy runs on another computer or in a different Docker network, the Forward Hostname / IP value may differ from this example. See the <a href="https://nginxproxymanager.com/guide/" target="_blank" rel="noopener">NPM guide ↗</a> for the manager itself.</p>
+  </section>
+
+{% elif page == 'activity' %}
+  <section class="panel"><div class="panel-heading"><div><h2>Detected events</h2><p class="muted">New uploads and stream alerts grouped by YouTube channel.</p></div><span class="subtle-label">Latest 12 per channel</span></div>
+  {% if history_by_channel %}{% for group in history_by_channel %}<article class="channel-item"><div class="channel-title"><h3>{{ group.title }}</h3></div>{% if group.events %}<ul class="event-list">{% for event in group.events %}<li><span class="event-marker"></span><span class="event-message"><strong>{{ event.event_type|title }}</strong> — <a href="{{ event.url }}" target="_blank" rel="noopener">{{ event.title }}</a></span><time>{{ event.event_time }}</time></li>{% endfor %}</ul>{% else %}<p class="muted channel-empty">No events detected for this channel yet.</p>{% endif %}</article>{% endfor %}{% else %}<p class="empty-state">Add a channel to see its detected events here.</p>{% endif %}</section>
+  <section class="panel"><div class="panel-heading"><div><h2>Delivery status</h2><p class="muted">Latest delivery attempts for each destination.</p></div><span class="subtle-label">Latest 20</span></div>{% if deliveries %}<ul class="event-list">{% for delivery in deliveries %}<li><span class="event-marker {% if delivery.status == 'failed' %}error{% elif delivery.status == 'sent' %}complete{% endif %}"></span><span class="event-message"><strong>{{ delivery.destination|title }} · {{ delivery.event_type|title }}</strong> — {{ delivery.title }} · {{ delivery.channel_title }}<br><span class="muted">{{ delivery.status|title }} · {{ delivery.attempts }} attempt(s){% if delivery.last_error %} · {{ delivery.last_error }}{% endif %}</span></span><time>{{ delivery.updated_at }}</time></li>{% endfor %}</ul>{% else %}<p class="empty-state">No destination deliveries yet. New events are queued when a destination is connected.</p>{% endif %}</section>
+  <section class="panel"><div class="panel-heading"><div><h2>System activity</h2><p class="muted">Recent startup and monitoring errors.</p></div><span class="subtle-label">Persistent history</span></div>{% if events %}<ul class="event-list">{% for event in events %}<li><span class="event-marker {{ event.level }}"></span><span class="event-message">{{ event.message }}</span><time>{{ event.created_at }}</time></li>{% endfor %}</ul>{% else %}<p class="empty-state">No activity recorded yet.</p>{% endif %}</section>
+
+{% elif page == 'settings' %}
+  <section class="panel theme-settings"><div class="panel-heading"><div><h2>Dashboard appearance</h2><p class="muted">Choose the visual style for this dashboard. Your choice is saved on this installation.</p></div></div><form action="/settings/theme" method="post" class="theme-form"><input type="hidden" name="csrf" value="{{ csrf_token }}"><fieldset class="theme-options"><legend>Theme</legend><label class="theme-option {% if theme == 'business' %}selected{% endif %}"><input type="radio" name="theme" value="business" {% if theme == 'business' %}checked{% endif %}><span class="theme-swatch business-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><strong>Business</strong><small>Dark, calm, and focused</small></span></label><label class="theme-option {% if theme == 'gaming' %}selected{% endif %}"><input type="radio" name="theme" value="gaming" {% if theme == 'gaming' %}checked{% endif %}><span class="theme-swatch gaming-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><strong>Gaming</strong><small>Dark surfaces with neon accents</small></span></label></fieldset><button class="primary-button" type="submit">Save theme</button></form></section>
+{% endif %}
 {% endblock %}

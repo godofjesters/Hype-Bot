@@ -453,6 +453,40 @@ def health() -> dict[str, str]:
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
+    return render_dashboard(request, "overview")
+
+
+@app.get("/channels", response_class=HTMLResponse)
+def channels_page(request: Request):
+    return render_dashboard(request, "channels")
+
+
+@app.get("/notifications/discord", response_class=HTMLResponse)
+def discord_page(request: Request):
+    return render_dashboard(request, "discord")
+
+
+@app.get("/notifications/facebook", response_class=HTMLResponse)
+def facebook_page(request: Request):
+    return render_dashboard(request, "facebook")
+
+
+@app.get("/hosting", response_class=HTMLResponse)
+def hosting_page(request: Request):
+    return render_dashboard(request, "hosting")
+
+
+@app.get("/activity", response_class=HTMLResponse)
+def activity_page(request: Request):
+    return render_dashboard(request, "activity")
+
+
+@app.get("/settings", response_class=HTMLResponse)
+def settings_page(request: Request):
+    return render_dashboard(request, "settings")
+
+
+def render_dashboard(request: Request, page: str):
     if not is_authenticated(request):
         return RedirectResponse("/login", status_code=303)
     with db_connection() as connection:
@@ -477,11 +511,22 @@ def home(request: Request):
     template_previews = {key: render_message(value, {"title":"New video title", "channel":"Example channel", "url":"https://youtube.com/watch?v=example", "event_type":"Stream", "scheduled_time":"2026-10-14 18:00 UTC"}) for key,value in templates_map.items()}
     page_options = json.loads(load_setting("meta_page_options") or "[]")
     flash = request.query_params.get("message")
+    page_titles = {
+        "overview": ("Overview", "A quick look at your monitoring and notification setup."),
+        "channels": ("YouTube channels", "Choose the channels and events Hype Bot monitors."),
+        "discord": ("Discord", "Connect your server and customize Discord alerts."),
+        "facebook": ("Facebook", "Connect a Page and customize Facebook posts."),
+        "hosting": ("Hosting & HTTPS", "Set up a domain and reverse proxy when Facebook integration needs a secure web address."),
+        "activity": ("Activity", "See detected videos, delivery attempts, and system messages."),
+        "settings": ("Settings", "Customize how Hype Bot looks."),
+    }
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
-        context=page_context(request, events=events, channels=channels, history_by_channel=history_by_channel,
-                             flash=flash, channel_error=request.query_params.get("error"),
+        context=page_context(request, page=page, page_title=page_titles[page][0], page_description=page_titles[page][1],
+                             channel_count=len(channels), callback_url=(APP_BASE_URL + "/destinations/facebook/callback") if APP_BASE_URL else "",
+                             events=events, channels=channels, history_by_channel=history_by_channel,
+                             flash=flash, channel_error=request.query_params.get("error") if request.query_params.get("error") in {"missing_key", "channel_limit", "channel_resolve"} else None,
                              poll_minutes=POLL_INTERVAL_MINUTES, youtube_ready=bool(YOUTUBE_API_KEY),
                              deliveries=deliveries, message_templates=templates_map,
                              template_previews=template_previews,
@@ -508,9 +553,9 @@ def save_theme(request: Request, theme: str = Form(...), csrf: str = Form(...)):
     if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
     require_csrf(request, csrf)
     if theme not in {"business", "gaming"}:
-        return RedirectResponse("/?error=theme", status_code=303)
+        return RedirectResponse("/settings?error=theme", status_code=303)
     save_setting("dashboard_theme", theme)
-    return RedirectResponse("/?message=theme_saved", status_code=303)
+    return RedirectResponse("/settings?message=theme_saved", status_code=303)
 
 
 @app.post("/destinations/discord")
@@ -519,32 +564,33 @@ def save_discord(request: Request, webhook: str = Form(...), csrf: str = Form(..
     require_csrf(request, csrf)
     webhook = webhook.strip()
     if not webhook.startswith("https://discord.com/api/webhooks/") and not webhook.startswith("https://discordapp.com/api/webhooks/"):
-        return RedirectResponse("/?error=discord_url", status_code=303)
+        return RedirectResponse("/notifications/discord?error=discord_url", status_code=303)
     store_secret("discord_webhook", webhook)
-    return RedirectResponse("/?message=discord_saved", status_code=303)
+    return RedirectResponse("/notifications/discord?message=discord_saved", status_code=303)
 
 
 @app.post("/destinations/templates")
-def save_templates(request: Request, discord_upload: str = Form(...), discord_stream: str = Form(...),
-                   facebook_upload: str = Form(...), facebook_stream: str = Form(...), csrf: str = Form(...)):
+def save_templates(request: Request, discord_upload: str | None = Form(None), discord_stream: str | None = Form(None),
+                   facebook_upload: str | None = Form(None), facebook_stream: str | None = Form(None), csrf: str = Form(...)):
     if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
     require_csrf(request, csrf)
     allowed = {"title", "channel", "url", "event_type", "scheduled_time"}
+    submitted = [(key, body) for key, body in (("discord_upload",discord_upload),("discord_stream",discord_stream),
+                 ("facebook_upload",facebook_upload),("facebook_stream",facebook_stream)) if body is not None]
+    target = "/notifications/facebook" if submitted and submitted[0][0].startswith("facebook_") else "/notifications/discord"
     try:
-        for key, body in (("discord_upload",discord_upload),("discord_stream",discord_stream),
-                          ("facebook_upload",facebook_upload),("facebook_stream",facebook_stream)):
+        for key, body in submitted:
             import string
             fields = {name for _, name, _, _ in string.Formatter().parse(body) if name}
             if not fields <= allowed or not body.strip(): raise ValueError()
             render_message(body, {name: name for name in allowed})
     except (ValueError, DestinationError):
-        return RedirectResponse("/?error=template", status_code=303)
+        return RedirectResponse(target + "?error=template", status_code=303)
     with db_connection() as connection:
-        for key, body in (("discord_upload",discord_upload),("discord_stream",discord_stream),
-                          ("facebook_upload",facebook_upload),("facebook_stream",facebook_stream)):
+        for key, body in submitted:
             destination, event_type = key.rsplit("_",1)
             connection.execute("INSERT INTO message_templates VALUES(?,?,?) ON CONFLICT(destination,event_type) DO UPDATE SET body=excluded.body", (destination,event_type,body))
-    return RedirectResponse("/?message=templates_saved", status_code=303)
+    return RedirectResponse(target + "?message=templates_saved", status_code=303)
 
 
 @app.post("/destinations/discord/test")
@@ -552,17 +598,17 @@ def test_discord(request: Request, csrf: str = Form(...)):
     if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
     require_csrf(request, csrf)
     webhook = load_secret("discord_webhook")
-    if not webhook: return RedirectResponse("/?error=discord_missing", status_code=303)
+    if not webhook: return RedirectResponse("/notifications/discord?error=discord_missing", status_code=303)
     try: discord_send(webhook, "Hype Bot test message. This was sent by an explicit dashboard test action.")
-    except DestinationError: return RedirectResponse("/?error=discord_test", status_code=303)
-    return RedirectResponse("/?message=discord_test", status_code=303)
+    except DestinationError: return RedirectResponse("/notifications/discord?error=discord_test", status_code=303)
+    return RedirectResponse("/notifications/discord?message=discord_test", status_code=303)
 
 
 @app.post("/destinations/facebook/connect")
 def connect_facebook(request: Request, csrf: str = Form(...)):
     if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
     require_csrf(request, csrf)
-    if not (META_APP_ID and META_APP_SECRET and APP_BASE_URL): return RedirectResponse("/?error=meta_config", status_code=303)
+    if not (META_APP_ID and META_APP_SECRET and APP_BASE_URL): return RedirectResponse("/notifications/facebook?error=meta_config", status_code=303)
     state = secrets.token_urlsafe(32); request.session["meta_oauth_state"] = state
     return RedirectResponse(meta_authorize_url(META_APP_ID, APP_BASE_URL + "/destinations/facebook/callback", state), status_code=303)
 
@@ -572,16 +618,16 @@ def facebook_callback(request: Request, code: str = "", state: str = "", error: 
     if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
     expected = request.session.pop("meta_oauth_state", "")
     if error or not expected or not hmac.compare_digest(expected,state) or not code:
-        return RedirectResponse("/?error=meta_auth", status_code=303)
+        return RedirectResponse("/notifications/facebook?error=meta_auth", status_code=303)
     try:
         user_token = meta_exchange_code(META_APP_ID,META_APP_SECRET,APP_BASE_URL + "/destinations/facebook/callback",code)
         pages = meta_pages(user_token)
     except DestinationError:
-        return RedirectResponse("/?error=meta_auth", status_code=303)
+        return RedirectResponse("/notifications/facebook?error=meta_auth", status_code=303)
     for page in pages: store_secret("meta_page_token:" + page["id"], page["token"])
     options = [{"id": page["id"],"name":page["name"]} for page in pages]
     save_setting("meta_page_options", json.dumps(options))
-    return RedirectResponse("/?message=pages_loaded" if options else "/?error=no_pages", status_code=303)
+    return RedirectResponse("/notifications/facebook?message=pages_loaded" if options else "/notifications/facebook?error=no_pages", status_code=303)
 
 
 @app.post("/destinations/facebook/page")
@@ -591,10 +637,10 @@ def select_facebook_page(request: Request, page_id: str = Form(...), csrf: str =
     pages = json.loads(load_setting("meta_page_options") or "[]")
     selected = next((page for page in pages if page["id"] == page_id), None)
     token = load_secret("meta_page_token:" + page_id) if selected else None
-    if not selected or not token: return RedirectResponse("/?error=page_select", status_code=303)
+    if not selected or not token: return RedirectResponse("/notifications/facebook?error=page_select", status_code=303)
     store_secret("facebook_page_id",page_id); store_secret("facebook_page_token",token)
     save_setting("facebook_page_name",selected["name"])
-    return RedirectResponse("/?message=facebook_saved", status_code=303)
+    return RedirectResponse("/notifications/facebook?message=facebook_saved", status_code=303)
 
 
 @app.post("/destinations/facebook/test")
@@ -602,10 +648,10 @@ def test_facebook(request: Request, csrf: str = Form(...)):
     if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
     require_csrf(request, csrf)
     page_id, token = load_secret("facebook_page_id"), load_secret("facebook_page_token")
-    if not page_id or not token: return RedirectResponse("/?error=facebook_missing", status_code=303)
+    if not page_id or not token: return RedirectResponse("/notifications/facebook?error=facebook_missing", status_code=303)
     try: facebook_send(page_id,token,"Hype Bot test message. This was sent by an explicit dashboard test action.")
-    except DestinationError: return RedirectResponse("/?error=facebook_test", status_code=303)
-    return RedirectResponse("/?message=facebook_test", status_code=303)
+    except DestinationError: return RedirectResponse("/notifications/facebook?error=facebook_test", status_code=303)
+    return RedirectResponse("/notifications/facebook?message=facebook_test", status_code=303)
 
 
 @app.post("/channels")
@@ -615,23 +661,23 @@ def add_channel(request: Request, background_tasks: BackgroundTasks,
         return RedirectResponse("/login", status_code=303)
     require_csrf(request, csrf)
     if not YOUTUBE_API_KEY:
-        return RedirectResponse("/?error=missing_key", status_code=303)
+        return RedirectResponse("/channels?error=missing_key", status_code=303)
     try:
         resolved = YouTubeClient(YOUTUBE_API_KEY).resolve_channel(channel_url)
         with db_connection() as connection:
             count = connection.execute("SELECT COUNT(*) FROM channels").fetchone()[0]
             exists = connection.execute("SELECT 1 FROM channels WHERE channel_id=?", (resolved["channel_id"],)).fetchone()
             if not exists and count >= 4:
-                return RedirectResponse("/?error=channel_limit", status_code=303)
+                return RedirectResponse("/channels?error=channel_limit", status_code=303)
             connection.execute(
                 "INSERT OR IGNORE INTO channels(channel_id,title,uploads_playlist,added_at) VALUES(?,?,?,?)",
                 (resolved["channel_id"], resolved["title"], resolved["uploads_playlist"], datetime.now(timezone.utc).isoformat()),
             )
         background_tasks.add_task(poll_channels, [resolved["channel_id"]])
         record_system_event("info", f"Monitoring channel added: {resolved['title']}.")
-        return RedirectResponse("/?message=channel_added", status_code=303)
+        return RedirectResponse("/channels?message=channel_added", status_code=303)
     except YouTubeError:
-        return RedirectResponse("/?error=channel_resolve", status_code=303)
+        return RedirectResponse("/channels?error=channel_resolve", status_code=303)
 
 
 @app.post("/channels/{channel_id}/settings")
@@ -648,7 +694,7 @@ def update_channel(channel_id: str, request: Request, uploads: str = Form("off")
             "UPDATE channels SET enabled_uploads=?, enabled_streams=?, stream_timing=? WHERE channel_id=?",
             (uploads == "on", streams == "on", stream_timing, channel_id),
         )
-    return RedirectResponse("/?message=settings_saved", status_code=303)
+    return RedirectResponse("/channels?message=settings_saved", status_code=303)
 
 
 @app.post("/channels/{channel_id}/delete")
@@ -658,7 +704,7 @@ def delete_channel(channel_id: str, request: Request, csrf: str = Form(...)):
     require_csrf(request, csrf)
     with db_connection() as connection:
         connection.execute("DELETE FROM channels WHERE channel_id=?", (channel_id,))
-    return RedirectResponse("/?message=channel_removed", status_code=303)
+    return RedirectResponse("/channels?message=channel_removed", status_code=303)
 
 
 @app.get("/login", response_class=HTMLResponse)

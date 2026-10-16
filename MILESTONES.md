@@ -20,6 +20,8 @@
 - [x] Authorize Meta, select one managed Facebook Page, encrypt its token, and publish Page posts.
 - [x] Edit and preview separate upload and stream templates for each platform.
 - [x] Create idempotent independent deliveries, retry temporary failures, and display per-destination delivery status.
+- [x] Split the dashboard into dedicated pages and add inline YouTube API, Discord webhook, and Meta/Facebook setup guidance.
+- [x] Add a Hosting & HTTPS guide with Nginx Proxy Manager example steps, linked from Facebook setup.
 
 ## 4. Debian deployment and operations
 
@@ -29,6 +31,7 @@
 
 ## Future
 
+- [ ] Expand Hosting & HTTPS guidance with a provider-neutral overview and an Apache2 reverse-proxy example; keep Nginx Proxy Manager as one option, not a requirement.
 - [ ] **Per-channel Facebook routing:** authorize multiple managed Pages and assign a Facebook Page to each monitored YouTube channel. Route business channel alerts only to the business Page and personal channel alerts only to the personal Page; keep Discord configuration global.
 - [ ] Add YouTube push notifications if public callback access becomes available.
 - [ ] Evaluate multi-user accounts after the single-admin version is in use.

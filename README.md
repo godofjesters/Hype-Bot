@@ -2,6 +2,10 @@
 
 Hype Bot watches YouTube channels and sends new upload and livestream alerts to Discord and Facebook Pages.
 
+## Project summary
+
+Hype Bot is a self-hosted Docker app with an authenticated dashboard for channel monitoring, notification setup, activity, and appearance settings. Setup instructions are built into the relevant dashboard pages, with a separate Hosting & HTTPS guide for Facebook's domain and HTTPS requirements. The app does not require a particular reverse proxy; Nginx Proxy Manager is currently the documented example, and Apache2 guidance is planned. Hosting remains the user's choice, and private access should be enforced through a VPN, firewall, or equivalent network controls.
+
 ## Pick where to run it
 
 - **Try it on your Windows computer:** follow [Docker Desktop for Windows](#install-on-windows-with-docker-desktop).
@@ -15,7 +19,7 @@ Have these ready:
 
 - Docker Desktop (Windows) or Docker Engine (Debian).
 - A YouTube Data API key, if you want channel monitoring.
-- A Discord webhook, if you want Discord alerts.
+- For Discord alerts: choose the Discord server and text channel where alerts should appear. You need **Manage Webhooks** permission for that channel to create the webhook.
 - Meta app credentials and an HTTPS website address, if you want Facebook alerts.
 
 Facebook setup can wait. You can start with YouTube and Discord.
@@ -165,11 +169,14 @@ Wait for `healthy`. Then open the HTTPS domain in your browser and sign in.
 
 ## Use the dashboard
 
+The dashboard has separate pages for Overview, Channels, Discord, Facebook, Hosting & HTTPS, Activity, and Settings. The YouTube, Discord, Facebook, and Hosting & HTTPS pages include setup steps and links to official instructions, so routine configuration can be completed without referring back to this README.
+
 1. Open **Channels** and add a YouTube channel link.
 2. Choose whether to monitor uploads, streams, or both. Stream alerts default to when YouTube schedules the stream.
-3. Open **Notifications**. Add a Discord webhook and use **Send test message** if you want to confirm it works.
-4. Open **Activity** to review detected events and delivery status.
-5. Open **Settings** to switch between the Business and Gaming themes.
+3. For Discord, create a webhook in the server and text channel where you want Hype Bot alerts. In Discord, open **Server Settings** → **Integrations** → **Webhooks** → **Create Webhook**, choose the destination channel, then copy its URL. You need the **Manage Webhooks** permission; ask a server administrator to create it or grant you that permission if you do not have it. Discord webhooks send directly to the selected channel, so you do not need to invite a Hype Bot account to the server. Treat the copied URL like a password.
+4. Open the **Discord** page, paste the webhook URL, and use **Send test message** if you want to confirm it works. Setup instructions are also shown on that page.
+5. Open **Activity** to review detected events and delivery status.
+6. Open **Settings** to switch between the Business and Gaming themes.
 
 When a channel is first added, Hype Bot announces its upcoming public streams. It uses that time as the starting point for uploads, so older videos are not replayed as alerts.
 
@@ -193,7 +200,7 @@ Facebook requires an HTTPS URL with a domain name that routes to Hype Bot. It ca
    ```
 
    This keeps your `hype-bot-data` volume.
-4. Open Hype Bot through its HTTPS domain. Under **Notifications**, select **Authorize with Meta**, sign in, and choose the Page.
+4. Open Hype Bot through its HTTPS domain. On the **Facebook** page, select **Authorize with Meta**, sign in, and choose the Page. The dashboard also shows the setup checklist and callback URL.
 5. Select **Publish test post** when you are ready. It creates a real, visible post on the selected Page.
 
 The current version sends Facebook alerts to one selected Page for all channels. It cannot yet send one channel to a business Page and another to a personal Page.

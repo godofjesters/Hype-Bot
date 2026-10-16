@@ -10,12 +10,18 @@
   <header class="topbar">
     <a class="brand" href="/">Hype Bot</a>
     {% if username %}
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="/" {% if page == 'overview' %}aria-current="page"{% endif %}>Overview</a>
+      <a href="/channels" {% if page == 'channels' %}aria-current="page"{% endif %}>Channels <span>{{ channel_count or 0 }}/4</span></a>
+      <a href="/notifications/discord" {% if page == 'discord' %}aria-current="page"{% endif %}>Discord</a>
+      <a href="/notifications/facebook" {% if page == 'facebook' %}aria-current="page"{% endif %}>Facebook</a>
+      <a href="/hosting" {% if page == 'hosting' %}aria-current="page"{% endif %}>Hosting &amp; HTTPS</a>
+      <a href="/activity" {% if page == 'activity' %}aria-current="page"{% endif %}>Activity</a>
+      <a href="/settings" {% if page == 'settings' %}aria-current="page"{% endif %}>Settings</a>
+    </nav>
     <div class="account">
       <span>{{ username }}</span>
-      <form action="/logout" method="post">
-        <input type="hidden" name="csrf" value="{{ csrf_token }}">
-        <button class="quiet-button" type="submit">Sign out</button>
-      </form>
+      <form action="/logout" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="quiet-button" type="submit">Sign out</button></form>
     </div>
     {% endif %}
   </header>

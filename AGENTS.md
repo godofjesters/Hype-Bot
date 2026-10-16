@@ -16,6 +16,8 @@ Hype Bot is a private, single-team web app that monitors YouTube channels and se
 - Planned Facebook routing: authorize and retain multiple managed Pages, then assign an optional Facebook Page independently to each monitored YouTube channel. A business YouTube channel should post only to its business Page, and personal channels only to the personal Page. Never cross-post a channel event to a Page that was not assigned to that channel.
 - Keep upload and stream message templates separate for each destination. Available fields: title, channel, URL, event type, scheduled time.
 - Provide Business and Gaming dashboard themes, selectable in Settings and persisted in SQLite; Business is the default for new installations.
+- Use separate authenticated dashboard pages for Overview, Channels, Discord, Facebook, Hosting & HTTPS, Activity, and Settings. Put step-by-step provider credential/setup guidance directly beside the relevant fields so routine setup does not require opening the README. Link the Facebook HTTPS prerequisite to the Hosting & HTTPS guide.
+- Keep hosting and reverse-proxy support provider-agnostic. Explain the shared requirements first (domain/DNS, HTTPS, upstream host and published port, secure cookies, exact `APP_BASE_URL`, and VPN/firewall restrictions), then give clearly labeled examples such as Nginx Proxy Manager and Apache2. Do not imply that the app requires NPM or assumes the user's private server address.
 - Do not send an upload alert for a video already announced as a stream.
 
 ## Implementation guidance
