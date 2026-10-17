@@ -89,6 +89,9 @@ time { color: #8293a6; font-size: 11px; }
 .quick-links a:hover { border-color: var(--accent); }
 .quick-links span { color: var(--accent); }
 .setup-note { margin-top: 17px; padding: 15px 17px; border: 1px solid rgba(117, 169, 255, .19); border-radius: 9px; color: var(--muted); background: rgba(49, 81, 124, .12); font-size: 13px; }
+.facebook-warning { margin: 17px 0; padding: 16px 18px; border: 2px solid #e9a23b; border-left-width: 7px; border-radius: 9px; color: #fff0cf; background: rgba(128, 74, 13, .28); font-size: 14px; }
+.facebook-warning > strong { display: block; margin-bottom: 8px; color: #ffd27a; font-size: 15px; }
+.facebook-warning p { margin: 0; }
 .setup-note > strong { display: block; margin-bottom: 8px; color: var(--text); }
 .setup-note p:last-child { margin-bottom: 0; }
 .setup-note ol { margin: 8px 0 12px; padding-left: 22px; }
@@ -236,6 +239,8 @@ body[data-theme="business"] .primary-button:hover { background: #a0dbc9; }
 body[data-theme="business"] .notice { border-color: #3f625b; color: #b9d0ca; background: #263b38; }
 body[data-theme="business"] .notice strong { color: #d1e7e0; }
 body[data-theme="business"] .setup-note { border-color: #3f625b; color: #b9d0ca; background: #263b38; }
+body[data-theme="business"] .facebook-warning { border-color: #a96200; color: #472d0c; background: #fff1d6; }
+body[data-theme="business"] .facebook-warning > strong { color: #7b4100; }
 body[data-theme="business"] .setup-note > strong { color: #e2f2ed; }
 body[data-theme="business"] .setup-note a, body[data-theme="business"] .provider-link { color: #9bd8cb; }
 body[data-theme="business"] .hosting-footnote a { color: #9bd8cb; }
@@ -298,6 +303,8 @@ body[data-theme="gaming"] .primary-button:hover { background: linear-gradient(10
 body[data-theme="gaming"] .notice { border-color: #403768; color: #cbc4e8; background: rgba(73, 55, 130, .2); }
 body[data-theme="gaming"] .notice strong { color: #d9ccff; }
 body[data-theme="gaming"] .setup-note { border-color: rgba(168, 85, 247, .32); color: #cbc4e8; background: linear-gradient(110deg, rgba(73, 55, 130, .24), rgba(24, 31, 54, .45)); }
+body[data-theme="gaming"] .facebook-warning { border-color: #f0ad4e; color: #ffedc5; background: rgba(115, 66, 11, .38); }
+body[data-theme="gaming"] .facebook-warning > strong { color: #ffd27a; }
 body[data-theme="gaming"] .setup-note > strong { color: #eee9ff; }
 body[data-theme="gaming"] .setup-note a, body[data-theme="gaming"] .provider-link { color: #74eff7; }
 body[data-theme="gaming"] .hosting-footnote a { color: #74eff7; }

@@ -75,12 +75,29 @@ def meta_exchange_code(app_id: str, app_secret: str, redirect_uri: str, code: st
 
 def meta_pages(user_token: str) -> list[dict[str, str]]:
     try:
-        response = httpx.get(f"https://graph.facebook.com/{META_GRAPH_VERSION}/me/accounts", params={
-            "fields": "id,name,access_token", "access_token": user_token,
-        }, timeout=20)
-        if response.status_code >= 400:
-            raise _request_error(response, "Meta Pages")
-        return [{"id": str(row["id"]), "name": str(row["name"]), "token": str(row["access_token"])}
-                for row in response.json().get("data", [])]
+        url = f"https://graph.facebook.com/{META_GRAPH_VERSION}/me/accounts"
+        params: dict[str, str | int] = {
+            "fields": "id,name,access_token", "access_token": user_token, "limit": 100,
+        }
+        pages: list[dict[str, str]] = []
+        seen_cursors: set[str] = set()
+        for _ in range(100):
+            response = httpx.get(url, params=params, timeout=20)
+            if response.status_code >= 400:
+                raise _request_error(response, "Meta Pages")
+            payload = response.json()
+            pages.extend(
+                {"id": str(row["id"]), "name": str(row["name"]), "token": str(row["access_token"])}
+                for row in payload.get("data", [])
+            )
+            paging = payload.get("paging", {})
+            next_cursor = paging.get("cursors", {}).get("after")
+            if not paging.get("next") or not next_cursor:
+                return pages
+            if next_cursor in seen_cursors:
+                raise DestinationError("Meta returned an invalid Page list.")
+            seen_cursors.add(next_cursor)
+            params["after"] = next_cursor
+        raise DestinationError("Meta returned too many Page list results.")
     except (httpx.HTTPError, KeyError, ValueError) as exc:
         raise DestinationError("Could not load managed Facebook Pages.") from exc

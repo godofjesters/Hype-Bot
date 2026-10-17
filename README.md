@@ -187,6 +187,8 @@ When a channel is first added, Hype Bot announces its upcoming public streams. I
 
 ## Connect Facebook
 
+> **⚠️ IMPORTANT: FACEBOOK SETUP IS OPTIONAL AND INVOLVED.** Hype Bot works without Facebook. You can monitor YouTube channels and send alerts to Discord without creating a Facebook Page or Meta developer app. Facebook setup is a separate, multi-step process involving Meta permissions, a Facebook Page, and an HTTPS domain. Skip this section if you do not need Facebook alerts.
+
 Hype Bot can publish to a Facebook **Page**, not to a personal Facebook profile. A Page can represent a creator, hobby, or brand; it does not have to be a business. The Facebook account you authorize must have permission to create content on the Page. The current version sends all Facebook alerts to one selected Page.
 
 ### If you need to create a Page
@@ -209,7 +211,7 @@ Hype Bot can publish to a Facebook **Page**, not to a personal Facebook profile.
 
 Facebook requires an HTTPS URL with a domain name that routes to Hype Bot. It cannot use an IP address by itself or plain `http://localhost:8018`. Where Hype Bot is hosted is up to you; the key requirement is that the domain-based HTTPS address and callback are configured for Meta.
 
-1. In the Page use case's permissions, verify that both `pages_show_list` and `pages_manage_posts` show **Ready for testing**. Hype Bot needs these to list your Pages and publish posts. Skip unrelated permissions. For a private development test, leave **Actions → Add to App Review** alone; review is for requesting broader access. Return to the app dashboard, expand **Facebook Login for Business** in the left sidebar, and choose **Settings**. Leave **Client OAuth login**, **Web OAuth login**, **Enforce HTTPS**, and **Use Strict Mode for redirect URIs** enabled. Do not enter the callback in **Redirect URI Validator**; that box only checks a URI. Enter Hype Bot’s exact callback in **Valid OAuth Redirect URIs** (the field lower on the page), then choose **Save Changes**:
+1. In the Page use case's permissions, verify that `pages_show_list`, `pages_manage_posts`, and `pages_read_engagement` show **Ready for testing**. Hype Bot needs these to list your Pages and publish posts; Meta may reject authorization if the Page permission dependency is not enabled. Skip unrelated permissions. For a private development test, leave **Actions → Add to App Review** alone; review is for requesting broader access. Return to the app dashboard, expand **Facebook Login for Business** in the left sidebar, and choose **Settings**. Leave **Client OAuth login**, **Web OAuth login**, **Enforce HTTPS**, and **Use Strict Mode for redirect URIs** enabled. Do not enter the callback in **Redirect URI Validator**; that box only checks a URI. Enter Hype Bot’s exact callback in **Valid OAuth Redirect URIs** (the field lower on the page), then choose **Save Changes**:
 
    ```text
    https://hypebot.example.com/destinations/facebook/callback
