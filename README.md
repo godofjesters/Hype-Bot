@@ -127,7 +127,7 @@ docker run -d --name hype-bot --restart unless-stopped --publish 192.168.150.3:8
 
 The source repository and its GHCR package have separate visibility settings. Making the repository public later will not automatically make the package public. To allow anonymous `docker pull`, change the package visibility to public in the package's GitHub settings. Until then, each server that pulls the image needs GHCR authentication.
 
-The app uses port `8000` inside Docker. Port `8018` is the port Nginx Proxy Manager uses to reach it. Docker creates the `hype-bot-data` volume automatically. The GitHub Actions workflow publishes `latest` from `main`, plus a commit SHA tag; pushing a version tag such as `v1.0.0` also publishes that version tag.
+The app uses port `8000` inside Docker. Port `8018` is the port Nginx Proxy Manager uses to reach it. Docker creates the `hype-bot-data` volume automatically. The GitHub Actions workflow publishes `latest` from `main` plus a commit SHA tag. Releases use Semantic Versioning tags in `vMAJOR.MINOR.PATCH` form, such as `v1.0.0`; pushing one publishes a matching versioned image. For a stable server install, pull the chosen version tag instead of `latest`.
 
 Run this `docker run` command only for the first install. If the container already exists, use `docker start hype-bot`.
 

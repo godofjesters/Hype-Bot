@@ -46,4 +46,4 @@
 - [ ] Confirm health, HTTPS login, channel polling, and persistent state after a container restart on the Debian server.
 - [ ] Configure the production HTTPS `APP_BASE_URL` and exact Meta OAuth redirect, authorize the Meta app, and select one managed Facebook Page.
 - [ ] Publish and verify the explicit Facebook test post, then verify one real detected event is delivered once using the configured template.
-- [ ] Create the `v1.0` release only after the pulled-image deployment, health and persistence checks, Facebook checks, and one real event delivery pass; per-channel Page routing remains a follow-up milestone.
+- [ ] Create the `v1.0.0` release only after the pulled-image deployment, health and persistence checks, Facebook checks, and one real event delivery pass; use `vMAJOR.MINOR.PATCH` for subsequent releases. Per-channel Page routing remains a follow-up milestone.
