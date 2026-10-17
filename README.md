@@ -115,16 +115,19 @@ In `.env`:
 
 Save in nano with **Ctrl+O**, press **Enter**, then exit with **Ctrl+X**.
 
-### 3. Build and start the container
+### 3. Pull and start the prebuilt container
 
-Run these commands from `/opt/hype-bot`:
+After the GitHub Actions run named **Publish Docker image** succeeds, pull the image from GHCR. The first publish creates the package. Because this repository and package are private, sign in to GHCR on Debian with a GitHub personal access token (classic) that has `read:packages` access. Enter the token when Docker prompts; do not put it in a command or save it in `.env`.
 
 ```sh
-docker build -t hype-bot:local .
-docker run -d --name hype-bot --restart unless-stopped --publish 192.168.150.3:8018:8000 --env-file .env --volume hype-bot-data:/data hype-bot:local
+docker login ghcr.io -u YOUR_GITHUB_USERNAME
+docker pull ghcr.io/godofjesters/hype-bot:latest
+docker run -d --name hype-bot --restart unless-stopped --publish 192.168.150.3:8018:8000 --env-file .env --volume hype-bot-data:/data ghcr.io/godofjesters/hype-bot:latest
 ```
 
-The app uses port `8000` inside Docker. Port `8018` is the port Nginx Proxy Manager uses to reach it. Docker creates the `hype-bot-data` volume automatically.
+The source repository and its GHCR package have separate visibility settings. Making the repository public later will not automatically make the package public. To allow anonymous `docker pull`, change the package visibility to public in the package's GitHub settings. Until then, each server that pulls the image needs GHCR authentication.
+
+The app uses port `8000` inside Docker. Port `8018` is the port Nginx Proxy Manager uses to reach it. Docker creates the `hype-bot-data` volume automatically. The GitHub Actions workflow publishes `latest` from `main`, plus a commit SHA tag; pushing a version tag such as `v1.0.0` also publishes that version tag.
 
 Run this `docker run` command only for the first install. If the container already exists, use `docker start hype-bot`.
 
@@ -234,6 +237,6 @@ docker stop hype-bot
 docker start hype-bot
 ```
 
-To update after pulling new project files, build the new image, remove the old container, and start it again with the same `docker run` command from your install section. Do not remove the `hype-bot-data` volume. Copy that `docker run` line somewhere safe; you will need it when updating.
+To update on Debian after GitHub Actions publishes a new image, run `docker pull ghcr.io/godofjesters/hype-bot:latest`, remove the old container with `docker rm -f hype-bot`, then run the same `docker run` command from your install section. Do not remove the `hype-bot-data` volume. Copy that `docker run` line somewhere safe; you will need it when updating. On Windows development installs, continue to build from source as described in the Windows section.
 
 For backups, rollback, logs, YouTube quota, and other advanced notes, see [OPERATIONS.md](OPERATIONS.md).

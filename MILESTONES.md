@@ -42,8 +42,8 @@
 - [ ] Nginx Proxy Manager setup is intentionally paused until Hype Bot is deployed on Debian. Planned hostname: hype.digital-dreamer.org; DNS can alias hype to the existing home.digital-dreamer.org destination, while leaving the apex and home record unchanged. Resume with the Debian backend, then configure the proxy host and certificate.
 
 - [ ] Build a screenshot-guided Meta app creation walkthrough for the Facebook dashboard and README, confirming the current app use case, Page permissions, OAuth redirect setup, and credential locations as the user shares each screen.
-- [ ] Deploy the release candidate from `/opt/hype-bot` on Debian 12, with host port `8018` forwarded to container port `8000` and Nginx Proxy Manager restricted to VPN access.
+- [ ] Publish a prebuilt image to GHCR from GitHub Actions, then pull and run that image on Debian 12. Keep deployment settings in `/opt/hype-bot`, publish host port `8018` to container port `8000`, and restrict Nginx Proxy Manager to VPN access. The source repository and container package can have separate visibility; while the package is private, authenticate Debian to GHCR before pulling.
 - [ ] Confirm health, HTTPS login, channel polling, and persistent state after a container restart on the Debian server.
 - [ ] Configure the production HTTPS `APP_BASE_URL` and exact Meta OAuth redirect, authorize the Meta app, and select one managed Facebook Page.
 - [ ] Publish and verify the explicit Facebook test post, then verify one real detected event is delivered once using the configured template.
-- [ ] Create the `v1.0` release only after the deployment and Facebook checks pass; per-channel Page routing remains a follow-up milestone.
+- [ ] Create the `v1.0` release only after the pulled-image deployment, health and persistence checks, Facebook checks, and one real event delivery pass; per-channel Page routing remains a follow-up milestone.
