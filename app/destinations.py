@@ -57,7 +57,10 @@ def facebook_send(page_id: str, token: str, message: str) -> str:
 # OAuth helpers accept config from caller to keep secrets out of module globals.
 def meta_authorize_url(app_id: str, redirect_uri: str, state: str) -> str:
     query = urlencode({"client_id": app_id, "redirect_uri": redirect_uri, "state": state,
-                       "scope": "pages_show_list,pages_manage_posts", "response_type": "code"})
+                       # business_management is needed for /me/accounts to include
+                       # Pages linked to a Meta business portfolio.
+                       "scope": "pages_show_list,pages_manage_posts,business_management",
+                       "response_type": "code"})
     return f"https://www.facebook.com/{META_GRAPH_VERSION}/dialog/oauth?{query}"
 
 
