@@ -24,6 +24,7 @@ Hype Bot is a private, single-team web app that monitors YouTube channels and se
 
 - Keep provider API calls behind small service functions so polling and delivery can be changed independently of the dashboard.
 - Persist channel state, event deduplication keys, delivery attempts, settings, and event history in SQLite on a named Docker volume.
+- Provide authenticated, CSRF-protected SQLite backup/restore in Settings. Use SQLite's backup API so WAL data is included, validate uploaded database integrity/schema and encrypted secrets against the configured APP_ENCRYPTION_KEY, pause polling/delivery while restoring, and keep an automatic pre-restore snapshot. Explain that `.env` is separate and the encryption key must match to restore provider credentials.
 - Encrypt destination tokens and webhook URLs at rest using `APP_ENCRYPTION_KEY`. Never log credential values or provider response bodies that might include credentials.
 - Use idempotent event and delivery records; retry temporary delivery errors and show the latest failure in the dashboard.
 - Refresh the stored event title from YouTube on each poll when a video is renamed. Keep the event ID and delivery records unchanged so title edits never trigger another notification.

@@ -179,7 +179,9 @@ The dashboard has separate pages for Overview, Channels, Discord, Facebook, Host
 3. For Discord, create a webhook in the server and text channel where you want Hype Bot alerts. In Discord, open **Server Settings** → **Integrations** → **Webhooks** → **Create Webhook**, choose the destination channel, then copy its URL. You need the **Manage Webhooks** permission; ask a server administrator to create it or grant you that permission if you do not have it. Discord webhooks send directly to the selected channel, so you do not need to invite a Hype Bot account to the server. Treat the copied URL like a password.
 4. Open the **Discord** page, paste the webhook URL, and use **Send test message** if you want to confirm it works. Setup instructions are also shown on that page.
 5. Open **Activity** to review detected events and delivery status.
-6. Open **Settings** to switch between the Business and Gaming themes.
+6. Open **Settings** to switch between the Business and Gaming themes, and to download or restore an app data backup.
+
+Settings backups contain saved channels, events, delivery history, templates, themes, and encrypted destination credentials. They do not contain `.env`. When moving the database to another server, configure `.env` separately and keep the same `APP_ENCRYPTION_KEY` so saved provider credentials can be decrypted.
 
 When a channel is first added, Hype Bot announces its upcoming public streams. It uses that time as the starting point for uploads, so older videos are not replayed as alerts.
 

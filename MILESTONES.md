@@ -4,6 +4,7 @@
 
 - [x] FastAPI dashboard, admin login, Docker image, and `docker run` deployment.
 - [x] Persistent SQLite storage and encrypted provider credential support.
+- [x] Download and restore SQLite backups from Settings, with validation, encryption-key checks, and a pre-restore recovery copy.
 - [x] Health status and basic operational error display.
 
 ## 2. YouTube monitoring

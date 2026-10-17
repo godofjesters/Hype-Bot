@@ -20,51 +20,36 @@ curl --fail http://192.168.150.3:8018/health
 
 ## Back up the database
 
-Stop Hype Bot before copying its SQLite volume so its database and write-ahead log are captured together. Save the backup somewhere secure. Keep it with the matching `.env` secrets, especially `APP_ENCRYPTION_KEY`.
+In Hype Bot, open **Settings → Backup and restore → Download backup**. The download is a consistent SQLite snapshot and includes channels, detected events, delivery history, templates, themes, and encrypted destination credentials. Keep it private.
 
-```sh
-docker stop hype-bot
-mkdir -p "$HOME/hype-bot-backups"
-docker run --rm --volume hype-bot-data:/data:ro --volume "$HOME/hype-bot-backups:/backup" alpine:3.20 tar -czf /backup/hype-bot-backup.tar.gz -C /data .
-docker start hype-bot
-```
-
-This example overwrites `hype-bot-backup.tar.gz` each time. Rename or copy the file after each backup if you want to keep multiple dates.
+The backup does not include `.env`. Store the matching `.env` secrets separately, especially `APP_ENCRYPTION_KEY`, which must remain identical to restore saved Discord and Facebook credentials. Hype Bot also makes a recovery snapshot in `/data/backups` before replacing existing data during a restore.
 
 ## Update and roll back
 
-Before an update, make a backup using the steps above. Then, from `/opt/hype-bot` on Debian:
+Before an update, download a backup using the steps above. Then, from `/opt/hype-bot` on Debian, pull the desired GHCR image tag, replace the container, and keep the named volume:
 
 ```sh
-git pull --ff-only
-docker tag hype-bot:local hype-bot:rollback
-docker build -t hype-bot:local .
+docker pull ghcr.io/godofjesters/hype-bot:latest
 docker rm -f hype-bot
-docker run -d --name hype-bot --restart unless-stopped --publish 192.168.150.3:8018:8000 --env-file .env --volume hype-bot-data:/data hype-bot:local
+docker run -d --name hype-bot --restart unless-stopped --publish 192.168.150.3:8018:8000 --env-file .env --volume hype-bot-data:/data ghcr.io/godofjesters/hype-bot:latest
 docker inspect --format '{{.State.Health.Status}}' hype-bot
 ```
 
 Wait for `healthy`, open the dashboard, and confirm your channels and recent Activity are present.
 
-If the update fails, replace the container using the saved image:
+For a rollback, replace `latest` in both commands with the previous version tag, such as `v1.0.0`:
 
 ```sh
+docker pull ghcr.io/godofjesters/hype-bot:v1.0.0
 docker rm -f hype-bot
-docker run -d --name hype-bot --restart unless-stopped --publish 192.168.150.3:8018:8000 --env-file .env --volume hype-bot-data:/data hype-bot:rollback
+docker run -d --name hype-bot --restart unless-stopped --publish 192.168.150.3:8018:8000 --env-file .env --volume hype-bot-data:/data ghcr.io/godofjesters/hype-bot:v1.0.0
 ```
 
-Keep your database backup until the update is confirmed. An image rollback cannot always undo a database change made by a newer version.
+Keep the database backup until the update is confirmed. An image rollback cannot always undo a database change made by a newer version.
 
 ## Restore a backup
 
-Restore into a new volume so the current data stays untouched. Replace `BACKUP_FILE.tar.gz` with the backup filename.
-
-```sh
-docker volume create hype-bot-data-restore
-docker run --rm --volume hype-bot-data-restore:/data --volume "$HOME/hype-bot-backups:/backup:ro" alpine:3.20 sh -c 'tar -xzf /backup/BACKUP_FILE.tar.gz -C /data && chown -R 10001:10001 /data'
-```
-
-After checking the extracted data, recreate the app using `hype-bot-data-restore` instead of `hype-bot-data` in the `docker run` command. Keep the original volume until the restored app is verified. The backup must use the same `APP_ENCRYPTION_KEY` as the saved database.
+Sign in to Hype Bot, open **Settings → Backup and restore**, choose the `.sqlite3` backup file, confirm that you want to replace the saved data, and select **Restore backup**. The app validates the database and verifies that its encrypted credentials match the configured `APP_ENCRYPTION_KEY` before restoring. It saves the current database under `/data/backups` first. On a new server, set up `.env` with the matching `APP_ENCRYPTION_KEY` before restoring; the backup file does not include `.env`.
 
 ## YouTube polling quota
 

@@ -7,16 +7,19 @@ import secrets
 import sqlite3
 import asyncio
 import json
+import tempfile
+import threading
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from cryptography.fernet import Fernet
-from fastapi import BackgroundTasks, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from cryptography.fernet import Fernet, InvalidToken
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.background import BackgroundTask
 from starlette.middleware.sessions import SessionMiddleware
 from app.youtube import YouTubeClient, YouTubeError
 from app.destinations import (DestinationError, discord_send, facebook_send,
@@ -38,6 +41,9 @@ META_APP_SECRET = os.environ.get("META_APP_SECRET", "").strip()
 META_GRAPH_VERSION = os.environ.get("META_GRAPH_VERSION", "v26.0").strip()
 APP_BASE_URL = os.environ.get("APP_BASE_URL", "").rstrip("/")
 POLL_INTERVAL_MINUTES = max(15, int(os.environ.get("POLL_INTERVAL_MINUTES", "60")))
+MAX_BACKUP_BYTES = 100 * 1024 * 1024
+DB_LOCK = threading.RLock()
+DATABASE_MAINTENANCE_LOCK = asyncio.Lock()
 
 
 def validate_configuration() -> None:
@@ -62,20 +68,21 @@ def validate_configuration() -> None:
 
 @contextmanager
 def db_connection():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(DB_PATH, timeout=10)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
-    connection.execute("PRAGMA journal_mode = WAL")
-    connection.execute("PRAGMA synchronous = NORMAL")
-    try:
-        yield connection
-        connection.commit()
-    except Exception:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
+    with DB_LOCK:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(DB_PATH, timeout=10)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
 
 def initialize_database() -> None:
@@ -155,6 +162,128 @@ def open_secret(value: str) -> str:
     key = hashlib.sha256(APP_ENCRYPTION_KEY.encode("utf-8")).digest()
     fernet = Fernet(__import__("base64").urlsafe_b64encode(key))
     return fernet.decrypt(value.encode("ascii")).decode("utf-8")
+
+
+class InvalidBackupError(ValueError):
+    pass
+
+
+class IncompatibleBackupError(ValueError):
+    pass
+
+
+class BackupEncryptionKeyError(ValueError):
+    pass
+
+
+def sqlite_backup(source_path: Path, backup_path: Path) -> None:
+    backup_path.parent.mkdir(parents=True, exist_ok=True)
+    with DB_LOCK:
+        source = sqlite3.connect(source_path, timeout=10)
+        destination = sqlite3.connect(backup_path, timeout=10)
+        try:
+            source.backup(destination)
+        finally:
+            destination.close()
+            source.close()
+    os.chmod(backup_path, 0o600)
+
+
+def validate_backup(backup_path: Path) -> None:
+    try:
+        connection = sqlite3.connect(f"file:{backup_path}?mode=ro", uri=True, timeout=10)
+        try:
+            integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+            if integrity != "ok":
+                raise InvalidBackupError("The backup database failed its integrity check.")
+            tables = {
+                row[0]
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+            required = {
+                "app_meta", "system_events", "channels", "monitored_events",
+                "message_templates", "deliveries",
+            }
+            if not required.issubset(tables):
+                raise InvalidBackupError("The selected file is not a Hype Bot backup.")
+            version = connection.execute(
+                "SELECT value FROM app_meta WHERE key='schema_version'"
+            ).fetchone()
+            if not version or version[0] != "3":
+                raise IncompatibleBackupError(
+                    "This backup is from an unsupported Hype Bot database version."
+                )
+            encrypted_values = connection.execute(
+                "SELECT value FROM app_meta WHERE key LIKE 'secret:%'"
+            ).fetchall()
+            try:
+                for row in encrypted_values:
+                    open_secret(row[0])
+            except (InvalidToken, ValueError, UnicodeError, TypeError, AttributeError) as exc:
+                raise BackupEncryptionKeyError(
+                    "The backup uses a different APP_ENCRYPTION_KEY."
+                ) from exc
+        finally:
+            connection.close()
+    except (InvalidBackupError, IncompatibleBackupError, BackupEncryptionKeyError):
+        raise
+    except sqlite3.Error as exc:
+        raise InvalidBackupError("The selected file is not a readable SQLite backup.") from exc
+
+
+def restore_database(backup_path: Path) -> Path:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    stage_handle = tempfile.NamedTemporaryFile(
+        prefix=".hype-bot-restore-", suffix=".sqlite3", dir=DB_PATH.parent, delete=False
+    )
+    stage_path = Path(stage_handle.name)
+    stage_handle.close()
+    try:
+        sqlite_backup(backup_path, stage_path)
+        validate_backup(stage_path)
+        restore_dir = DATA_DIR / "backups"
+        restore_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        safety_path = restore_dir / f"hype-bot-before-restore-{timestamp}.sqlite3"
+        swap_path = DB_PATH.with_name(f".{DB_PATH.name}.swap-{secrets.token_hex(8)}")
+
+        with DB_LOCK:
+            if DB_PATH.exists():
+                sqlite_backup(DB_PATH, safety_path)
+                current = sqlite3.connect(DB_PATH, timeout=10)
+                try:
+                    current.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                finally:
+                    current.close()
+                for suffix in ("-wal", "-shm"):
+                    Path(f"{DB_PATH}{suffix}").unlink(missing_ok=True)
+                os.replace(DB_PATH, swap_path)
+
+            try:
+                os.replace(stage_path, DB_PATH)
+                initialize_database()
+            except Exception:
+                DB_PATH.unlink(missing_ok=True)
+                for suffix in ("-wal", "-shm"):
+                    Path(f"{DB_PATH}{suffix}").unlink(missing_ok=True)
+                if swap_path.exists():
+                    os.replace(swap_path, DB_PATH)
+                raise
+            else:
+                swap_path.unlink(missing_ok=True)
+
+        old_backups = sorted(
+            restore_dir.glob("hype-bot-before-restore-*.sqlite3"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for old_backup in old_backups[5:]:
+            old_backup.unlink(missing_ok=True)
+        return safety_path
+    finally:
+        stage_path.unlink(missing_ok=True)
 
 
 def store_secret(name: str, value: str) -> None:
@@ -362,7 +491,8 @@ def poll_channels(channel_ids: list[str] | None = None) -> None:
 
 async def poll_loop() -> None:
     while True:
-        await asyncio.to_thread(poll_channels)
+        async with DATABASE_MAINTENANCE_LOCK:
+            await asyncio.to_thread(poll_channels)
         await asyncio.sleep(POLL_INTERVAL_MINUTES * 60)
 
 
@@ -413,11 +543,12 @@ def _deliver(delivery_id: int) -> None:
 
 async def delivery_loop() -> None:
     while True:
-        now = datetime.now(timezone.utc).isoformat()
-        with db_connection() as connection:
-            rows = connection.execute("SELECT id FROM deliveries WHERE status='pending' OR (status='failed' AND next_attempt_at IS NOT NULL AND next_attempt_at<=?) ORDER BY id LIMIT 30", (now,)).fetchall()
-        for row in rows:
-            await asyncio.to_thread(_deliver, row["id"])
+        async with DATABASE_MAINTENANCE_LOCK:
+            now = datetime.now(timezone.utc).isoformat()
+            with db_connection() as connection:
+                rows = connection.execute("SELECT id FROM deliveries WHERE status='pending' OR (status='failed' AND next_attempt_at IS NOT NULL AND next_attempt_at<=?) ORDER BY id LIMIT 30", (now,)).fetchall()
+            for row in rows:
+                await asyncio.to_thread(_deliver, row["id"])
         await asyncio.sleep(15)
 
 
@@ -486,6 +617,89 @@ def settings_page(request: Request):
     return render_dashboard(request, "settings")
 
 
+def remove_temporary_file(path: Path) -> None:
+    path.unlink(missing_ok=True)
+
+
+@app.get("/settings/backup")
+async def download_backup(request: Request):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=303)
+    handle = tempfile.NamedTemporaryFile(
+        prefix="hype-bot-backup-", suffix=".sqlite3", dir=DB_PATH.parent, delete=False
+    )
+    backup_path = Path(handle.name)
+    handle.close()
+    try:
+        async with DATABASE_MAINTENANCE_LOCK:
+            await asyncio.to_thread(sqlite_backup, DB_PATH, backup_path)
+        if backup_path.stat().st_size > MAX_BACKUP_BYTES:
+            remove_temporary_file(backup_path)
+            return RedirectResponse("/settings?error=backup_size", status_code=303)
+    except (OSError, sqlite3.Error):
+        remove_temporary_file(backup_path)
+        return RedirectResponse("/settings?error=backup_failed", status_code=303)
+    filename = f"hype-bot-backup-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.sqlite3"
+    return FileResponse(
+        backup_path,
+        media_type="application/vnd.sqlite3",
+        filename=filename,
+        background=BackgroundTask(remove_temporary_file, backup_path),
+    )
+
+
+@app.post("/settings/restore")
+async def restore_backup(
+    request: Request,
+    backup_file: UploadFile = File(...),
+    csrf: str = Form(...),
+    confirm_restore: str = Form(""),
+):
+    if not is_authenticated(request):
+        return RedirectResponse("/login", status_code=303)
+    require_csrf(request, csrf)
+    if confirm_restore != "yes":
+        return RedirectResponse("/settings?error=backup_confirm", status_code=303)
+
+    handle = tempfile.NamedTemporaryFile(
+        prefix=".hype-bot-upload-", suffix=".sqlite3", dir=DB_PATH.parent, delete=False
+    )
+    upload_path = Path(handle.name)
+    handle.close()
+    error = None
+    try:
+        total = 0
+        with upload_path.open("wb") as output:
+            while chunk := await backup_file.read(1024 * 1024):
+                total += len(chunk)
+                if total > MAX_BACKUP_BYTES:
+                    error = "backup_size"
+                    break
+                output.write(chunk)
+
+        if error is None:
+            async with DATABASE_MAINTENANCE_LOCK:
+                await asyncio.to_thread(validate_backup, upload_path)
+                await asyncio.to_thread(restore_database, upload_path)
+    except BackupEncryptionKeyError:
+        error = "backup_key"
+    except IncompatibleBackupError:
+        error = "backup_version"
+    except InvalidBackupError:
+        error = "backup_invalid"
+    except (OSError, sqlite3.Error):
+        error = "backup_failed"
+    except Exception:
+        error = "backup_failed"
+    finally:
+        await backup_file.close()
+        remove_temporary_file(upload_path)
+
+    if error:
+        return RedirectResponse(f"/settings?error={error}", status_code=303)
+    return RedirectResponse("/settings?message=backup_restored", status_code=303)
+
+
 def render_dashboard(request: Request, page: str):
     if not is_authenticated(request):
         return RedirectResponse("/login", status_code=303)
@@ -518,7 +732,7 @@ def render_dashboard(request: Request, page: str):
         "facebook": ("Facebook", "Connect a Page and customize Facebook posts."),
         "hosting": ("Hosting & HTTPS", "Set up a domain and reverse proxy when Facebook integration needs a secure web address."),
         "activity": ("Activity", "See detected videos, delivery attempts, and system messages."),
-        "settings": ("Settings", "Customize how Hype Bot looks."),
+        "settings": ("Settings", "Customize Hype Bot and protect or move its saved data."),
     }
     return templates.TemplateResponse(
         request=request,
