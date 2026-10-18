@@ -602,6 +602,11 @@ def facebook_page(request: Request):
     return render_dashboard(request, "facebook")
 
 
+@app.get("/facebook-setup", response_class=HTMLResponse)
+def facebook_setup_page(request: Request):
+    return render_dashboard(request, "facebook_setup")
+
+
 @app.get("/hosting", response_class=HTMLResponse)
 def hosting_page(request: Request):
     return render_dashboard(request, "hosting")
@@ -730,6 +735,7 @@ def render_dashboard(request: Request, page: str):
         "channels": ("YouTube channels", "Choose the channels and events Hype Bot monitors."),
         "discord": ("Discord", "Connect your server and customize Discord alerts."),
         "facebook": ("Facebook", "Connect a Page and customize Facebook posts."),
+        "facebook_setup": ("Facebook setup guide", "Step-by-step instructions for connecting a Facebook Page to Hype Bot."),
         "hosting": ("Hosting & HTTPS", "Set up a domain and reverse proxy when Facebook integration needs a secure web address."),
         "activity": ("Activity", "See detected videos, delivery attempts, and system messages."),
         "settings": ("Settings", "Customize Hype Bot and protect or move its saved data."),

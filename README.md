@@ -189,6 +189,8 @@ When a channel is first added, Hype Bot announces its upcoming public streams. I
 
 > **⚠️ IMPORTANT: FACEBOOK SETUP IS OPTIONAL AND INVOLVED.** Hype Bot works without Facebook. You can monitor YouTube channels and send alerts to Discord without creating a Facebook Page or Meta developer app. Facebook setup is a separate, multi-step process involving Meta permissions, a Facebook Page, and an HTTPS domain. Skip this section if you do not need Facebook alerts.
 
+The signed-in dashboard has a **Facebook setup guide** with the step-by-step flow and troubleshooting. Open **Facebook → Step-by-step setup guide** after signing in.
+
 Hype Bot can publish to a Facebook **Page**, not to a personal Facebook profile. A Page can represent a creator, hobby, or brand; it does not have to be a business. The Facebook account you authorize must have permission to create content on the Page. The current version sends all Facebook alerts to one selected Page.
 
 ### If you need to create a Page

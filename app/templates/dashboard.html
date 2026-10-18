@@ -49,6 +49,7 @@
   </section>
 
 {% elif page == 'facebook' %}
+  <section class="panel guide-promo"><strong>Need the full setup walkthrough?</strong><a class="small-button" href="/facebook-setup">Open the Facebook setup guide →</a></section>
   <section class="panel"><div class="panel-heading"><div><h2>Connect a Facebook Page</h2><p class="muted">Authorize Hype Bot to publish alerts to a Page you manage.</p></div><span class="badge {% if facebook_page %}complete{% endif %}">{{ facebook_page or 'Not connected' }}</span></div>
     <div class="facebook-warning" role="note"><strong>⚠️ IMPORTANT: FACEBOOK SETUP IS OPTIONAL AND INVOLVED</strong><p>Hype Bot works without Facebook. You can monitor YouTube channels and send alerts to Discord without creating a Facebook Page or Meta developer app. Facebook setup is a separate, multi-step process involving Meta permissions, a Facebook Page, and an HTTPS domain. Skip it if you do not need Facebook alerts.</p></div>
     <div class="setup-note"><strong>Before connecting</strong><p>Hype Bot can publish to a Facebook <b>Page</b>, not a personal Facebook profile. A Page can represent a creator, hobby, or brand; it does not have to be a business. The Facebook account you authorize must have permission to create content on that Page. Hype Bot currently sends all Facebook alerts to one selected Page.</p><details class="page-create-help"><summary>Don’t have a Facebook Page yet?</summary><p>You can create a Page for a creator or hobby without turning your personal profile into a business. Your personal profile remains the account you use to sign in and manage the Page.</p><ol><li>Sign in to Facebook with the account you plan to connect to Hype Bot.</li><li>Open <a href="https://www.facebook.com/pages/create/" target="_blank" rel="noopener">Facebook’s Create a Page screen ↗</a>.</li><li>Enter a Page name, choose a category such as Digital Creator if it fits, add an optional description, and create the Page.</li><li>Make sure this same Facebook account has access to create content on the new Page. You can review access in <a href="https://www.facebook.com/help/187316341316631" target="_blank" rel="noopener">Facebook Page access settings ↗</a>.</li></ol></details><details class="page-create-help"><summary>Steps to create the Meta app</summary><ol><li>Register for a <a href="https://developers.facebook.com/" target="_blank" rel="noopener">Meta for Developers account ↗</a> if you have not already.</li><li>From <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">My Apps ↗</a>, choose <b>Create App</b>. On the app-details screen, enter an app name and a contact email associated with the Facebook account you use to manage Pages. Use an inbox you check regularly; Meta may contact you there about the app.</li><li>On <b>Use cases</b>, select <b>Manage everything on your Page</b>. In the creation wizard shown here, this Page use case cannot be selected together with <b>Authenticate and request data from users with Facebook Login</b>. The Page management use case is the one Hype Bot needs for Page publishing.</li><li>On <b>Business</b>, you can choose <b>I don’t want to connect a business portfolio yet</b> and associate one later. Meta notes that business verification may be required to complete verification and gain data access.</li><li>Review the <b>Requirements</b> screen, then review the app name, contact email, and use case on <b>Overview</b> and choose <b>Create app</b>.</li><li>In the new app dashboard, open <b>Customize the Manage everything on your Page use case</b> to continue with Page permissions. The callback and permissions are covered below.</li></ol></details><ol><li>Under the Page use case’s permissions, verify that <code>pages_show_list</code>, <code>pages_manage_posts</code>, and <code>pages_read_engagement</code> show <b>Ready for testing</b>. Meta may reject authorization if the Page permission dependency is not enabled. Skip unrelated permissions. For a private development test, leave the Actions menu’s Add to App Review option alone; review is for requesting broader access. Then return to the app dashboard, expand <b>Facebook Login for Business</b> in the left sidebar, and choose <b>Settings</b>. Leave <b>Client OAuth login</b>, <b>Web OAuth login</b>, <b>Enforce HTTPS</b>, and <b>Use Strict Mode for redirect URIs</b> enabled. The top <b>Redirect URI Validator</b> only checks a URI; enter this exact callback in <b>Valid OAuth Redirect URIs</b> lower on the page, then choose <b>Save Changes</b>:</li></ol><code class="callback-url">{{ callback_url or 'Set APP_BASE_URL in the deployment settings to show the callback URL here.' }}</code><p>The callback must exactly match the app's HTTPS address plus <code>/destinations/facebook/callback</code>. In the app's basic settings, copy its App ID and App Secret into <code>META_APP_ID</code> and <code>META_APP_SECRET</code> in Hype Bot's private deployment settings. Meta controls which Pages appear based on the account you authorize. Meta may require app review or an app role before use outside development. Hype Bot must have an HTTPS web address using a domain name; an IP address alone or <code>localhost</code> cannot be used for Meta's redirect. <a href="/hosting">Open the Hosting &amp; HTTPS guide →</a> for help setting up the domain and proxy.</p><a class="provider-link" href="https://developers.facebook.com/docs/facebook-login/" target="_blank" rel="noopener">Meta Facebook Login documentation ↗</a></div>
@@ -58,6 +59,90 @@
     {% if facebook_page %}<form class="inline-form" action="/destinations/facebook/test" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="small-button" type="submit">Publish test post</button><span class="muted">This creates a real post visible on the selected Page.</span></form>{% endif %}
   </section>
   <section class="panel"><div class="panel-heading"><div><h2>Facebook message templates</h2><p class="muted">Customize upload and stream posts. Available fields: {title}, {channel}, {url}, {event_type}, {scheduled_time}.</p></div></div><form action="/destinations/templates" method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}"><div class="template-grid">{% for kind in ['upload','stream'] %}{% set key='facebook_' ~ kind %}<article class="channel-item"><label>Facebook {{ kind|title }}<textarea name="{{ key }}" rows="3" required>{{ message_templates[key] }}</textarea></label><p class="muted">Preview: {{ template_previews[key] }}</p></article>{% endfor %}</div><button class="primary-button" type="submit">Save Facebook templates</button></form></section>
+
+{% elif page == 'facebook_setup' %}
+  <section class="panel guide-warning">
+    <h2>Facebook is optional and takes several setup steps</h2>
+    <p>Hype Bot works without Facebook. You can monitor YouTube channels and send Discord alerts without creating a Facebook Page or Meta developer app. Skip this guide if you do not need Facebook posting.</p>
+    <p>Facebook posting is to a <strong>Page</strong>, not a personal profile. Setup involves Meta app configuration, Page permissions, and an HTTPS domain. Meta can change its screens and may require app review or business verification for use beyond development.</p>
+  </section>
+  <section class="panel">
+    <div class="panel-heading"><div><h2>Before you start</h2><p class="muted">Gather these pieces first so setup goes smoothly.</p></div></div>
+    <ul class="guide-checklist">
+      <li>A Facebook Page. It can represent a creator, hobby, or brand; it does not have to be a business. If you need one, <a href="https://www.facebook.com/pages/create/" target="_blank" rel="noopener">create a Page on Facebook ↗</a>.</li>
+      <li>The Facebook account you authorize must be able to create content on that Page. If the Page is linked to a Meta business portfolio, your account also needs a role in that business.</li>
+      <li>A domain-based HTTPS address for Hype Bot. An IP address by itself or <code>localhost</code> will not work as Meta's OAuth redirect. Keep the dashboard private with a VPN, firewall, or equivalent access control; the domain does not require making the app publicly accessible.</li>
+      <li>Access to Hype Bot's private deployment settings so the Meta App ID and App Secret can be added without sharing them in chat or logs.</li>
+    </ul>
+    <p class="muted">If the HTTPS domain or proxy is not ready, follow the <a href="/hosting">Hosting &amp; HTTPS guide →</a> first.</p>
+  </section>
+  <section class="panel">
+    <div class="panel-heading"><div><h2>Step 1 · Create the Meta app</h2><p class="muted">Use an app that you control and can maintain.</p></div></div>
+    <ol class="guide-steps">
+      <li>Open <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">Meta for Developers → My Apps ↗</a> and choose <strong>Create App</strong>. Sign in with the account that manages your Page.</li>
+      <li>For the use case, choose <strong>Manage everything on your Page</strong>. Meta's creation screens can change; choose the Page-management use case that provides Page publishing permissions.</li>
+      <li>Complete the app details and requirements. You may defer connecting a business portfolio during app creation if Meta offers that choice; this is separate from granting access to a business-owned Page later.</li>
+      <li>Keep the app in development while setting it up. Add the Facebook account you will use to authorize as an app administrator, developer, or tester if Meta requires an app role.</li>
+    </ol>
+  </section>
+  <section class="panel">
+    <div class="panel-heading"><div><h2>Step 2 · Enable the required permissions</h2><p class="muted">In the app's Page use case, verify these are ready for testing.</p></div></div>
+    <ul class="guide-checklist">
+      <li><code>pages_show_list</code> — lets Hype Bot list Pages available to your account.</li>
+      <li><code>pages_manage_posts</code> — lets Hype Bot publish Page posts.</li>
+      <li><code>pages_read_engagement</code> — a related Page permission Meta may require for Page API access.</li>
+      <li><code>business_management</code> — needed for Pages linked to a Meta business portfolio. Your Facebook account also needs a role in that business.</li>
+    </ul>
+    <p>Enable these permissions for testing in your app's use case. Meta may require additional review or verification before an app can be used by people outside its development roles. Do not add unrelated permissions.</p>
+  </section>
+  <section class="panel">
+    <div class="panel-heading"><div><h2>Step 3 · Register the exact HTTPS callback</h2><p class="muted">This value must match Hype Bot's configured HTTPS address exactly.</p></div></div>
+    <ol class="guide-steps">
+      <li>In the Meta app dashboard, open <strong>Facebook Login for Business → Settings</strong>.</li>
+      <li>Leave <strong>Client OAuth login</strong>, <strong>Web OAuth login</strong>, <strong>Enforce HTTPS</strong>, and <strong>Use Strict Mode for redirect URIs</strong> enabled.</li>
+      <li>Enter the callback below under <strong>Valid OAuth Redirect URIs</strong>, then choose <strong>Save Changes</strong>. The Redirect URI Validator near the top only checks a URL; it does not register the callback.</li>
+    </ol>
+    <code class="callback-url">{{ callback_url or 'Ask the Hype Bot administrator to set APP_BASE_URL before continuing.' }}</code>
+    <p class="muted">The callback is Hype Bot's HTTPS base address plus <code>/destinations/facebook/callback</code>. It must match exactly, including scheme and hostname.</p>
+  </section>
+  <section class="panel">
+    <div class="panel-heading"><div><h2>Step 4 · Configure Hype Bot</h2><p class="muted">The App Secret is a credential. Keep it private.</p></div></div>
+    <ol class="guide-steps">
+      <li>In Meta's <strong>App settings → Basic</strong>, copy the App ID and reveal/copy the App Secret.</li>
+      <li>Ask the person who runs Hype Bot to set <code>META_APP_ID</code> and <code>META_APP_SECRET</code> in the private deployment environment. Never paste the App Secret into this page, a screenshot, a support post, or a chat.</li>
+      <li>Make sure <code>APP_BASE_URL</code> is the same HTTPS address you will open in the browser, with no trailing slash. Set <code>COOKIE_SECURE=true</code> when using HTTPS.</li>
+      <li>Recreate or restart the container so it loads the settings, while keeping the existing named data volume.</li>
+      <li>Open Hype Bot at that HTTPS address on a device that can reach it (for a private installation, connect to the VPN first).</li>
+    </ol>
+  </section>
+  <section class="panel">
+    <div class="panel-heading"><div><h2>Step 5 · Authorize and choose Pages</h2><p class="muted">Meta presents separate choices for business portfolios and Pages.</p></div></div>
+    <ol class="guide-steps">
+      <li>In Hype Bot, open <a href="/notifications/facebook">Facebook notifications →</a> and choose <strong>Authorize with Meta</strong>.</li>
+      <li>Sign in to the Facebook account with access to the Page. If Meta asks which businesses Hype Bot may access, choose <strong>Current Businesses only</strong>, then select only the business that owns or manages the Page you need.</li>
+      <li>When Meta asks which Pages to share, choose <strong>Current Pages only</strong> and select the Page or Pages Hype Bot should be allowed to use. Continue and accept the requested Page permissions.</li>
+      <li>After Meta returns to Hype Bot, use the Page dropdown and <strong>Use this Page</strong> to select the destination.</li>
+    </ol>
+    <aside class="notice"><strong>Current limitation</strong><span>Hype Bot stores one global Facebook Page selection. All Facebook alerts go to that Page. Per-channel routing between business and personal Pages is planned but is not available yet.</span></aside>
+  </section>
+  <section class="panel">
+    <div class="panel-heading"><div><h2>Step 6 · Confirm the connection</h2><p class="muted">A test post is optional and visible on the selected Page.</p></div></div>
+    <ol class="guide-steps">
+      <li>Confirm the Facebook page in Hype Bot shows the selected Page as connected.</li>
+      <li>If you want to verify publishing, choose <strong>Publish test post</strong>. This creates a real Facebook post; skip it if you do not want a test post on the Page.</li>
+      <li>Check the Hype Bot Activity page for delivery status after an actual alert.</li>
+    </ol>
+  </section>
+  <section class="panel">
+    <div class="panel-heading"><div><h2>If something goes wrong</h2><p class="muted">Check the setting that matches the symptom.</p></div></div>
+    <ul class="guide-checklist">
+      <li><strong>A business Page is missing:</strong> verify <code>business_management</code> is enabled for testing, the authorizing account has a role in that business, then authorize again and select the business and Page.</li>
+      <li><strong>Meta reports an invalid scope:</strong> make sure the permission is added to the app's Page use case and ready for testing, then retry authorization.</li>
+      <li><strong>Meta returns a redirect error:</strong> compare the registered Valid OAuth Redirect URI with the exact callback shown above and verify <code>APP_BASE_URL</code>.</li>
+      <li><strong>The callback cannot load:</strong> use the HTTPS domain, not the LAN IP. If Hype Bot is VPN-only, the device completing sign-in must be connected to a network path that can resolve and reach that domain.</li>
+      <li><strong>Authorization completes but the Page cannot publish:</strong> verify the Facebook account has content-creation access to that Page and <code>pages_manage_posts</code> is ready for testing.</li>
+    </ul>
+  </section>
 
 {% elif page == 'hosting' %}
   <section class="panel"><div class="panel-heading"><div><h2>Do you need this?</h2><p class="muted">Discord alerts and YouTube monitoring do not need a public web address. Facebook sign-in does.</p></div></div>

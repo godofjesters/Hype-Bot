@@ -465,3 +465,30 @@ body[data-theme="gaming"] .theme-option.selected { background: rgba(66, 232, 245
   .status-pill { white-space: normal; }
   .account { gap: 6px; }
 }
+
+.guide-promo { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 0; }
+.guide-promo strong { color: var(--text); }
+.guide-warning { border-color: rgba(244, 199, 106, .55); background: linear-gradient(145deg, rgba(93, 65, 22, .25), rgba(17, 25, 36, .95)); }
+.guide-warning h2 { color: #ffd27a; }
+.guide-warning p:last-child { margin-bottom: 0; }
+.guide-checklist,
+.guide-steps { margin: 14px 0 0; padding-left: 24px; }
+.guide-checklist li,
+.guide-steps li { margin: 0 0 11px; padding-left: 4px; }
+.guide-checklist li::marker,
+.guide-steps li::marker { color: var(--accent); font-weight: 750; }
+.guide-checklist a,
+.guide-steps a { color: #a9caff; text-decoration: underline; text-underline-offset: 2px; }
+.guide-checklist + p { margin-top: 14px; }
+body[data-theme="business"] .guide-warning { border-color: #a96200; color: #472d0c; background: #fff1d6; }
+body[data-theme="business"] .guide-warning h2 { color: #7b4100; }
+body[data-theme="business"] .guide-checklist a,
+body[data-theme="business"] .guide-steps a { color: #35685c; }
+body[data-theme="gaming"] .guide-warning { background: linear-gradient(145deg, rgba(88, 57, 20, .4), rgba(19, 17, 33, .96)); }
+body[data-theme="gaming"] .guide-warning h2 { color: #ffd27a; }
+body[data-theme="gaming"] .guide-checklist a,
+body[data-theme="gaming"] .guide-steps a { color: #73f1f7; }
+@media (max-width: 700px) {
+  .guide-promo { align-items: stretch; flex-direction: column; }
+  .guide-promo .small-button { width: 100%; }
+}
