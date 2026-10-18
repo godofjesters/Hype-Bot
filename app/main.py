@@ -499,8 +499,11 @@ async def poll_loop() -> None:
 def enqueue_deliveries(connection: sqlite3.Connection, event_id: int) -> None:
     now = datetime.now(timezone.utc).isoformat()
     configured = []
-    if load_secret("discord_webhook"):
-        configured.append("discord")
+    event = connection.execute("SELECT event_type FROM monitored_events WHERE id=?", (event_id,)).fetchone()
+    if event:
+        discord_key = "discord_stream_webhook" if event[0] == "stream" else "discord_upload_webhook"
+        if load_secret(discord_key) or load_secret("discord_webhook"):
+            configured.append("discord")
     if load_secret("facebook_page_token") and load_secret("facebook_page_id"):
         configured.append("facebook")
     for destination in configured:
@@ -524,7 +527,8 @@ def _deliver(delivery_id: int) -> None:
     try:
         remote_id = ""
         if dest == "discord":
-            discord_send(load_secret("discord_webhook") or "", message)
+            key = "discord_stream_webhook" if row["event_type"] == "stream" else "discord_upload_webhook"
+            discord_send(load_secret(key) or load_secret("discord_webhook") or "", message)
         else:
             remote_id = facebook_send(load_secret("facebook_page_id") or "", load_secret("facebook_page_token") or "", message)
         status, error, retry_at = "sent", None, None
@@ -751,7 +755,8 @@ def render_dashboard(request: Request, page: str):
                              deliveries=deliveries, message_templates=templates_map,
                              template_previews=template_previews,
                              theme=load_setting("dashboard_theme") or "business",
-                             discord_ready=bool(load_secret("discord_webhook")),
+                             discord_ready=bool(load_secret("discord_upload_webhook") or load_secret("discord_webhook")),
+                             discord_stream_ready=bool(load_secret("discord_stream_webhook") or load_secret("discord_webhook")),
                              facebook_page=load_setting("facebook_page_name"),
                              page_options=page_options, meta_ready=bool(META_APP_ID and META_APP_SECRET and APP_BASE_URL)),
     )
@@ -779,13 +784,15 @@ def save_theme(request: Request, theme: str = Form(...), csrf: str = Form(...)):
 
 
 @app.post("/destinations/discord")
-def save_discord(request: Request, webhook: str = Form(...), csrf: str = Form(...)):
+def save_discord(request: Request, upload_webhook: str = Form(""), stream_webhook: str = Form(""), csrf: str = Form(...)):
     if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
     require_csrf(request, csrf)
-    webhook = webhook.strip()
-    if not webhook.startswith("https://discord.com/api/webhooks/") and not webhook.startswith("https://discordapp.com/api/webhooks/"):
-        return RedirectResponse("/notifications/discord?error=discord_url", status_code=303)
-    store_secret("discord_webhook", webhook)
+    for key, webhook in (("discord_upload_webhook", upload_webhook.strip()), ("discord_stream_webhook", stream_webhook.strip())):
+        if not webhook.startswith("https://discord.com/api/webhooks/") and not webhook.startswith("https://discordapp.com/api/webhooks/"):
+            return RedirectResponse("/notifications/discord?error=discord_url", status_code=303)
+        store_secret(key, webhook)
+    with db_connection() as connection:
+        connection.execute("DELETE FROM app_meta WHERE key='secret:discord_webhook'")
     return RedirectResponse("/notifications/discord?message=discord_saved", status_code=303)
 
 
@@ -817,9 +824,22 @@ def save_templates(request: Request, discord_upload: str | None = Form(None), di
 def test_discord(request: Request, csrf: str = Form(...)):
     if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
     require_csrf(request, csrf)
-    webhook = load_secret("discord_webhook")
+    webhook = load_secret("discord_upload_webhook") or load_secret("discord_webhook")
     if not webhook: return RedirectResponse("/notifications/discord?error=discord_missing", status_code=303)
     try: discord_send(webhook, "Hype Bot test message. This was sent by an explicit dashboard test action.")
+    except DestinationError: return RedirectResponse("/notifications/discord?error=discord_test", status_code=303)
+    return RedirectResponse("/notifications/discord?message=discord_test", status_code=303)
+
+
+@app.post("/destinations/discord/test/{kind}")
+def test_discord_kind(kind: str, request: Request, csrf: str = Form(...)):
+    if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
+    require_csrf(request, csrf)
+    if kind not in {"upload", "stream"}: raise HTTPException(status_code=404)
+    key = "discord_stream_webhook" if kind == "stream" else "discord_upload_webhook"
+    webhook = load_secret(key) or load_secret("discord_webhook")
+    if not webhook: return RedirectResponse("/notifications/discord?error=discord_missing", status_code=303)
+    try: discord_send(webhook, f"Hype Bot {kind} channel test message. This was sent by an explicit dashboard test action.")
     except DestinationError: return RedirectResponse("/notifications/discord?error=discord_test", status_code=303)
     return RedirectResponse("/notifications/discord?message=discord_test", status_code=303)
 

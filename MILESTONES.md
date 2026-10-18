@@ -18,6 +18,7 @@
 ## 3. Notification destinations
 
 - [x] Configure a Discord webhook, encrypt it at rest, and provide an explicit test action.
+- [x] Route video upload and stream alerts to independently configured Discord channels using separate encrypted webhooks and explicit test actions.
 - [x] Authorize Meta, select one managed Facebook Page, encrypt its token, and publish Page posts.
 - [x] Edit and preview separate upload and stream templates for each platform.
 - [x] Create idempotent independent deliveries, retry temporary failures, and display per-destination delivery status.

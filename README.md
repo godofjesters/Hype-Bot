@@ -19,7 +19,7 @@ Have these ready:
 
 - Docker Desktop (Windows) or Docker Engine (Debian).
 - A YouTube Data API key, if you want channel monitoring.
-- For Discord alerts: choose the Discord server and text channel where alerts should appear. You need **Manage Webhooks** permission for that channel to create the webhook.
+- For Discord alerts: choose separate text channels for video uploads and stream alerts. You need **Manage Webhooks** permission in both channels to create their webhooks.
 - Meta app credentials and an HTTPS website address, if you want Facebook alerts.
 
 Facebook setup can wait. You can start with YouTube and Discord.
@@ -176,8 +176,8 @@ The dashboard has separate pages for Overview, Channels, Discord, Facebook, Host
 
 1. Open **Channels** and add a YouTube channel link.
 2. Choose whether to monitor uploads, streams, or both. Stream alerts default to when YouTube schedules the stream.
-3. For Discord, create a webhook in the server and text channel where you want Hype Bot alerts. In Discord, open **Server Settings** → **Integrations** → **Webhooks** → **Create Webhook**, choose the destination channel, then copy its URL. You need the **Manage Webhooks** permission; ask a server administrator to create it or grant you that permission if you do not have it. Discord webhooks send directly to the selected channel, so you do not need to invite a Hype Bot account to the server. Treat the copied URL like a password.
-4. Open the **Discord** page, paste the webhook URL, and use **Send test message** if you want to confirm it works. Setup instructions are also shown on that page.
+3. For Discord, create two webhooks: one in the channel for video uploads and one in the channel for stream alerts. In Discord, open **Server Settings** → **Integrations** → **Webhooks** → **Create Webhook**, choose the destination channel, then copy its URL. You need **Manage Webhooks** permission in both channels; ask a server administrator if needed. Webhooks post directly, so you do not need to invite a Hype Bot account. Treat both URLs like passwords.
+4. Open the **Discord** page and save the two webhook URLs in their matching fields. Use the separate test buttons to confirm each channel. Upload events go only to the video channel; stream events go only to the stream channel.
 5. Open **Activity** to review detected events and delivery status.
 6. Open **Settings** to switch between the Business and Gaming themes, and to download or restore an app data backup.
 
