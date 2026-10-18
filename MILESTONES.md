@@ -39,7 +39,7 @@
 - [ ] Add YouTube push notifications if public callback access becomes available.
 - [ ] Evaluate multi-user accounts after the single-admin version is in use.
 
-## Production verification (complete; v1.0.0 release pending)
+## Production verification and v1.0.0 release (complete)
 
 - [x] Deploy Hype Bot on Debian behind Nginx Proxy Manager with HTTPS and VPN-only access.
 
@@ -48,4 +48,4 @@
 - [x] Confirm health, HTTPS login, channel polling, and persistent state after a container restart on the Debian server.
 - [x] Configure the production HTTPS `APP_BASE_URL` and exact Meta OAuth redirect, authorize the Meta app, and select a managed Facebook Page.
 - [x] Publish and verify the explicit Facebook test post, then verify one real detected event reached both configured destinations. Hype Bot recorded one attempt per destination; a local test bot was also active during the Discord check and was shut down afterward.
-- [ ] Create the `v1.0.0` release only after the pulled-image deployment, health and persistence checks, Facebook checks, and one real event delivery pass; use `vMAJOR.MINOR.PATCH` for subsequent releases. Per-channel Page routing remains a follow-up milestone.
+- [x] Create the `v1.0.0` release after the pulled-image deployment, health and persistence checks, Facebook checks, and one real event delivery passed. Use `vMAJOR.MINOR.PATCH` for subsequent releases. Per-channel Page routing remains a follow-up milestone.
