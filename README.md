@@ -234,6 +234,28 @@ Facebook requires an HTTPS URL with a domain name that routes to Hype Bot. It ca
 
 The current version sends Facebook alerts to one selected Page for all channels. It cannot yet send one channel to a business Page and another to a creator Page.
 
+## Local test suite
+
+The tests use a temporary SQLite database, test-only credentials, and mocked Discord delivery. They do not start the polling workers or contact YouTube, Discord, or Meta.
+
+On Windows PowerShell:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+python -m pytest
+```
+
+On Linux or macOS:
+
+```sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+python -m pytest
+```
+
 ## Stop, start, and update
 
 On Windows, run these in PowerShell. On Debian, run them in SSH from `/opt/hype-bot`:

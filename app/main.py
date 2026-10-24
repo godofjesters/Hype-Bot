@@ -787,9 +787,14 @@ def save_theme(request: Request, theme: str = Form(...), csrf: str = Form(...)):
 def save_discord(request: Request, upload_webhook: str = Form(""), stream_webhook: str = Form(""), csrf: str = Form(...)):
     if not is_authenticated(request): return RedirectResponse("/login", status_code=303)
     require_csrf(request, csrf)
-    for key, webhook in (("discord_upload_webhook", upload_webhook.strip()), ("discord_stream_webhook", stream_webhook.strip())):
+    webhooks = (
+        ("discord_upload_webhook", upload_webhook.strip()),
+        ("discord_stream_webhook", stream_webhook.strip()),
+    )
+    for _, webhook in webhooks:
         if not webhook.startswith("https://discord.com/api/webhooks/") and not webhook.startswith("https://discordapp.com/api/webhooks/"):
             return RedirectResponse("/notifications/discord?error=discord_url", status_code=303)
+    for key, webhook in webhooks:
         store_secret(key, webhook)
     with db_connection() as connection:
         connection.execute("DELETE FROM app_meta WHERE key='secret:discord_webhook'")
